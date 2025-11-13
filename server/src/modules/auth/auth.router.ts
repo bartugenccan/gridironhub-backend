@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { validateRequest } from '../../middleware/validate-request';
 import { logger } from '../../lib/logger';
+import { signInWithPassword, refreshSession } from './auth.service';
 import {
   loginBodySchema,
   refreshBodySchema,
@@ -10,44 +11,34 @@ import {
 
 export const authRouter = Router();
 
-authRouter.post('/login', validateRequest({ body: loginBodySchema }), (req, res) => {
-  const { email, role } = req.body as LoginBody;
+authRouter.post('/login', validateRequest({ body: loginBodySchema }), async (req, res, next) => {
+  const { email, password, role } = req.body as LoginBody;
 
-  logger.debug({ email, role }, 'Authenticating user');
+  try {
+    logger.debug({ email, role }, 'Authenticating user with Supabase');
 
-  // This is a placeholder implementation while Supabase Auth is wired.
-  // The final integration will exchange credentials for a Supabase session.
-  const mockUser = {
-    id: '00000000-0000-0000-0000-000000000000',
-    email,
-    role,
-    teams: role === 'coach' ? ['demo-team-1'] : ['demo-team-1', 'demo-team-2'],
-  };
+    const authResponse = await signInWithPassword(email, password, role);
 
-  return res.status(200).json({
-    session: {
-      accessToken: 'mock-access-token',
-      refreshToken: 'mock-refresh-token',
-      expiresIn: 3600,
-    },
-    user: mockUser,
-  });
+    return res.status(200).json(authResponse);
+  } catch (error) {
+    return next(error);
+  }
 });
 
-authRouter.post('/refresh', validateRequest({ body: refreshBodySchema }), (req, res) => {
-  const { refreshToken } = req.body as RefreshBody;
+authRouter.post(
+  '/refresh',
+  validateRequest({ body: refreshBodySchema }),
+  async (req, res, next) => {
+    const { refreshToken } = req.body as RefreshBody;
 
-  logger.debug({ refreshToken }, 'Refreshing session');
-
-  // Placeholder response until Supabase token refresh is implemented.
-  return res.status(200).json({
-    session: {
-      accessToken: 'mock-access-token-refreshed',
-      refreshToken,
-      expiresIn: 3600,
-    },
-  });
-});
+    try {
+      const session = await refreshSession(refreshToken);
+      return res.status(200).json({ session });
+    } catch (error) {
+      return next(error);
+    }
+  },
+);
 
 authRouter.post('/logout', (_req, res) => {
   // With Supabase, clients invalidate tokens locally. Endpoint kept for parity with clients.

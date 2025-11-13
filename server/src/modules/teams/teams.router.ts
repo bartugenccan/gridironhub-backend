@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { requireAuth, requireRole } from '../../middleware/auth-context';
 import { validateRequest } from '../../middleware/validate-request';
 import {
   teamCustomizationSchema,
@@ -7,6 +8,8 @@ import {
 } from './teams.schemas';
 
 export const teamsRouter = Router();
+
+teamsRouter.use(requireAuth);
 
 teamsRouter.get('/:id', validateRequest({ params: teamParamsSchema }), (req, res) => {
   const { id } = req.params as { id: string };
@@ -40,6 +43,7 @@ teamsRouter.get('/:id', validateRequest({ params: teamParamsSchema }), (req, res
 
 teamsRouter.patch(
   '/:id/customization',
+  requireRole('coach'),
   validateRequest({ params: teamParamsSchema, body: teamCustomizationSchema }),
   (req, res) => {
     const { id } = req.params as { id: string };

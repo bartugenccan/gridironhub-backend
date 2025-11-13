@@ -1,5 +1,7 @@
 import { Router } from 'express';
+import { requireAuth, requireRole } from '../../middleware/auth-context';
 import { validateRequest } from '../../middleware/validate-request';
+import { forbidden } from '../../utils/http-error';
 import {
   coachProfileUpdateSchema,
   playerProfileUpdateSchema,
@@ -9,6 +11,8 @@ import {
 } from './profiles.schemas';
 
 export const profilesRouter = Router();
+
+profilesRouter.use(requireAuth);
 
 profilesRouter.get('/players/:id', validateRequest({ params: profileParamsSchema }), (req, res) => {
   const { id } = req.params as { id: string };
@@ -37,10 +41,15 @@ profilesRouter.get('/players/:id', validateRequest({ params: profileParamsSchema
 
 profilesRouter.patch(
   '/players/:id',
+  requireRole('player'),
   validateRequest({ params: profileParamsSchema, body: playerProfileUpdateSchema }),
   (req, res) => {
     const { id } = req.params as { id: string };
     const payload = req.body as PlayerProfileUpdate;
+
+    if (req.user?.id !== id) {
+      throw forbidden('Players can only update their own profile');
+    }
 
     return res.json({
       id,
@@ -68,10 +77,15 @@ profilesRouter.get('/coaches/:id', validateRequest({ params: profileParamsSchema
 
 profilesRouter.patch(
   '/coaches/:id',
+  requireRole('coach'),
   validateRequest({ params: profileParamsSchema, body: coachProfileUpdateSchema }),
   (req, res) => {
     const { id } = req.params as { id: string };
     const payload = req.body as CoachProfileUpdate;
+
+    if (req.user?.id !== id) {
+      throw forbidden('Coaches can only update their own profile');
+    }
 
     return res.json({
       id,
