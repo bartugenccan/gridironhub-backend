@@ -1,11 +1,14 @@
 import type { Express } from 'express';
 import { Router } from 'express';
+import { attachAuthContext } from '../middleware/auth-context';
 import { authRouter } from '../modules/auth/auth.router';
 import { profilesRouter } from '../modules/profiles/profiles.router';
 import { teamsRouter } from '../modules/teams/teams.router';
 
 export const registerRoutes = (app: Express) => {
   const api = Router();
+
+  api.use(attachAuthContext);
 
   api.get('/health', (_req, res) => {
     res.json({ status: 'ok' });
