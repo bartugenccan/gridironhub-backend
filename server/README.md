@@ -39,9 +39,12 @@ TypeScript Express backend powered by Supabase for authentication, data, and med
 ### Player Registration
 
 - **POST** `/api/auth/register` – Public endpoint for players to create an account.
-  - Payload: `{ email, password, fullName }`
+  - Payload: `{ email, password, fullName, teamId, position }`
+  - `teamId`: UUID of the team (e.g., "Sakarya Tatankaları")
+  - `position`: Player position (e.g., "QB", "WR", "RB", "LB", etc.)
   - Returns: Session tokens and user info (instant login)
   - Creates user with `role: "player"` and inserts into `player_profiles`
+  - Automatically assigns player to selected team in `team_members` with selected position
 
 ### Coach Registration
 

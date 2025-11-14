@@ -120,12 +120,12 @@ authRouter.post(
   '/register',
   validateRequest({ body: registerBodySchema }),
   async (req, res, next) => {
-    const { email, password, fullName } = req.body as RegisterBody;
+    const { email, password, fullName, teamId, position } = req.body as RegisterBody;
 
     try {
-      logger.debug({ email }, 'Registering new player');
+      logger.debug({ email, teamId, position }, 'Registering new player with team assignment');
 
-      const authResponse = await registerPlayer(email, password, fullName);
+      const authResponse = await registerPlayer(email, password, fullName, teamId, position);
 
       return res.status(201).json(authResponse);
     } catch (error) {

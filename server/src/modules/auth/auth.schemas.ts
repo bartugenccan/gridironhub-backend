@@ -26,6 +26,32 @@ export const registerBodySchema = z.object({
     .string()
     .min(2, 'Full name must be at least 2 characters')
     .max(100, 'Full name must be less than 100 characters'),
+  teamId: z.string().uuid('Team ID must be a valid UUID'),
+  position: z.enum([
+    'QB',
+    'RB',
+    'FB',
+    'WR',
+    'TE',
+    'OL',
+    'C',
+    'G',
+    'T',
+    'DL',
+    'DE',
+    'DT',
+    'LB',
+    'ILB',
+    'OLB',
+    'DB',
+    'CB',
+    'S',
+    'FS',
+    'SS',
+    'K',
+    'P',
+    'LS',
+  ]),
 });
 
 export type RegisterBody = z.infer<typeof registerBodySchema>;
@@ -48,6 +74,34 @@ export const coachPositions = [
 ] as const;
 
 export type CoachPosition = (typeof coachPositions)[number];
+
+export const playerPositions = [
+  'QB', // Quarterback
+  'RB', // Running Back
+  'FB', // Fullback
+  'WR', // Wide Receiver
+  'TE', // Tight End
+  'OL', // Offensive Lineman
+  'C', // Center
+  'G', // Guard
+  'T', // Tackle
+  'DL', // Defensive Lineman
+  'DE', // Defensive End
+  'DT', // Defensive Tackle
+  'LB', // Linebacker
+  'ILB', // Inside Linebacker
+  'OLB', // Outside Linebacker
+  'DB', // Defensive Back
+  'CB', // Cornerback
+  'S', // Safety
+  'FS', // Free Safety
+  'SS', // Strong Safety
+  'K', // Kicker
+  'P', // Punter
+  'LS', // Long Snapper
+] as const;
+
+export type PlayerPosition = (typeof playerPositions)[number];
 
 export const inviteCoachBodySchema = z.object({
   email: z.string().email('Invalid email address'),

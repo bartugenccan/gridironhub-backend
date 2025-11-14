@@ -4,6 +4,7 @@ import { logger } from '../../lib/logger';
 import { badRequest, forbidden, unauthorized } from '../../utils/http-error';
 import type { AuthResponse, SessionPayload, UserRole } from './auth.types';
 import type { Database } from '../../types/supabase';
+import { PlayerPosition } from './auth.schemas';
 
 const mapRole = (user: User): UserRole => {
   const metadata = (user.user_metadata ?? {}) as Record<string, unknown>;
@@ -74,8 +75,21 @@ export const registerPlayer = async (
   email: string,
   password: string,
   fullName: string,
+  teamId: string,
+  position: PlayerPosition,
 ): Promise<AuthResponse> => {
-  // Create user with role: player in metadata
+  // Validate team exists
+  const { data: team, error: teamError } = await supabaseAdmin
+    .from('teams')
+    .select('id')
+    .eq('id', teamId)
+    .single();
+
+  if (teamError || !team) {
+    throw badRequest('Team not found');
+  }
+
+  // Create user with role: player in metadata, including team_id and position
   const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
@@ -83,6 +97,8 @@ export const registerPlayer = async (
     user_metadata: {
       role: 'player',
       full_name: fullName,
+      team_id: teamId,
+      position: position,
     },
   });
 
@@ -95,16 +111,42 @@ export const registerPlayer = async (
 
   const userId = createData.user.id;
 
-  // Insert player profile
-  const { error: profileError } = await supabaseAdmin.from('player_profiles').insert({
-    user_id: userId,
-    full_name: fullName,
-  } as Database['public']['Tables']['player_profiles']['Insert']);
+  // Insert or update player profile
+  // Note: Trigger creates the profile automatically, but we need to set position
+  // Use upsert to handle both cases (trigger created it or not)
+  const { error: profileError } = await supabaseAdmin.from('player_profiles').upsert(
+    {
+      user_id: userId,
+      full_name: fullName,
+      position: position,
+    } as Database['public']['Tables']['player_profiles']['Insert'],
+    {
+      onConflict: 'user_id',
+    },
+  );
 
   if (profileError) {
     // Cleanup: delete user if profile creation fails
     await supabaseAdmin.auth.admin.deleteUser(userId);
-    throw badRequest('Failed to create player profile');
+    logger.error({ error: profileError, userId }, 'Failed to create/update player profile');
+    throw badRequest(`Failed to create player profile: ${profileError.message}`);
+  }
+
+  // Assign player to team
+  const { error: assignmentError } = await supabaseAdmin.from('team_members').insert({
+    team_id: teamId,
+    user_id: userId,
+    role: 'player',
+    status: 'active',
+    primary_position: position,
+  } as Database['public']['Tables']['team_members']['Insert']);
+
+  if (assignmentError) {
+    // Log error but don't fail registration - trigger might also handle it
+    logger.error(
+      { error: assignmentError, userId, teamId },
+      'Failed to assign player to team during registration',
+    );
   }
 
   // Sign in to get session
