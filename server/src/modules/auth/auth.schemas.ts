@@ -13,3 +13,131 @@ export const refreshBodySchema = z.object({
 });
 
 export type RefreshBody = z.infer<typeof refreshBodySchema>;
+
+export const registerBodySchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters long')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
+  fullName: z
+    .string()
+    .min(2, 'Full name must be at least 2 characters')
+    .max(100, 'Full name must be less than 100 characters'),
+  teamId: z.string().uuid('Team ID must be a valid UUID'),
+  position: z.enum([
+    'QB',
+    'RB',
+    'FB',
+    'WR',
+    'TE',
+    'OL',
+    'C',
+    'G',
+    'T',
+    'DL',
+    'DE',
+    'DT',
+    'LB',
+    'ILB',
+    'OLB',
+    'DB',
+    'CB',
+    'S',
+    'FS',
+    'SS',
+    'K',
+    'P',
+    'LS',
+  ]),
+});
+
+export type RegisterBody = z.infer<typeof registerBodySchema>;
+
+export const coachPositions = [
+  'Head Coach',
+  'Offensive Coordinator',
+  'Defensive Coordinator',
+  'Special Teams Coach',
+  'Quarterbacks Coach',
+  'Running Backs Coach',
+  'Wide Receivers Coach',
+  'Tight Ends Coach',
+  'Offensive Line Coach',
+  'Defensive Line Coach',
+  'Linebackers Coach',
+  'Defensive Backs Coach',
+  'Strength and Conditioning Coach',
+  'Assistant Coach',
+] as const;
+
+export type CoachPosition = (typeof coachPositions)[number];
+
+export const playerPositions = [
+  'QB', // Quarterback
+  'RB', // Running Back
+  'FB', // Fullback
+  'WR', // Wide Receiver
+  'TE', // Tight End
+  'OL', // Offensive Lineman
+  'C', // Center
+  'G', // Guard
+  'T', // Tackle
+  'DL', // Defensive Lineman
+  'DE', // Defensive End
+  'DT', // Defensive Tackle
+  'LB', // Linebacker
+  'ILB', // Inside Linebacker
+  'OLB', // Outside Linebacker
+  'DB', // Defensive Back
+  'CB', // Cornerback
+  'S', // Safety
+  'FS', // Free Safety
+  'SS', // Strong Safety
+  'K', // Kicker
+  'P', // Punter
+  'LS', // Long Snapper
+] as const;
+
+export type PlayerPosition = (typeof playerPositions)[number];
+
+export const inviteCoachBodySchema = z.object({
+  email: z.string().email('Invalid email address'),
+  fullName: z
+    .string()
+    .min(2, 'Full name must be at least 2 characters')
+    .max(100, 'Full name must be less than 100 characters'),
+  teamId: z.string().uuid('Team ID must be a valid UUID'),
+  position: z.enum([
+    'Head Coach',
+    'Offensive Coordinator',
+    'Defensive Coordinator',
+    'Special Teams Coach',
+    'Quarterbacks Coach',
+    'Running Backs Coach',
+    'Wide Receivers Coach',
+    'Tight Ends Coach',
+    'Offensive Line Coach',
+    'Defensive Line Coach',
+    'Linebackers Coach',
+    'Defensive Backs Coach',
+    'Strength and Conditioning Coach',
+    'Assistant Coach',
+  ]),
+});
+
+export type InviteCoachBody = z.infer<typeof inviteCoachBodySchema>;
+
+export const setPasswordBodySchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters long')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
+});
+
+export type SetPasswordBody = z.infer<typeof setPasswordBodySchema>;

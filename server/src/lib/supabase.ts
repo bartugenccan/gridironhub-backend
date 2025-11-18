@@ -1,8 +1,7 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import { env } from '../config/env';
-
-// Supabase types will be refined once the database schema is generated.
-type Database = Record<string, never>;
+import { unauthorized } from '../utils/http-error';
+import type { Database } from '../types/supabase';
 
 export type AdminSupabaseClient = SupabaseClient<Database>;
 export type ServiceSupabaseClient = SupabaseClient<Database>;
@@ -28,3 +27,16 @@ export const createSupabaseClient = (accessToken?: string): ServiceSupabaseClien
         : {},
     },
   });
+
+export const getUserFromAccessToken = async (
+  accessToken: string,
+): Promise<{ client: ServiceSupabaseClient; user: User }> => {
+  const client = createSupabaseClient(accessToken);
+  const { data, error } = await client.auth.getUser();
+
+  if (error || !data.user) {
+    throw unauthorized('Invalid Supabase access token');
+  }
+
+  return { client, user: data.user };
+};
