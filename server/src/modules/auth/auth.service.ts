@@ -176,7 +176,7 @@ export const inviteCoach = async (
     .from('teams')
     .select('id')
     .eq('id', teamId)
-    .single();
+    .maybeSingle();
 
   if (teamError || !team) {
     throw badRequest('Team not found');

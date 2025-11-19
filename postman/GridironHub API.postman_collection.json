@@ -1,0 +1,494 @@
+{
+  "info": {
+    "_postman_id": "gridironhub-api-collection",
+    "name": "GridironHub API",
+    "description": "GridironHub Backend API Collection - Tüm endpoint'ler ve test senaryoları",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "API sağlık kontrolü endpoint'i"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.session?.access_token) {",
+                  "        pm.environment.set('auth_token', response.session.access_token);",
+                  "        pm.environment.set('user_id', response.user?.id || '');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"player@example.com\",\n  \"password\": \"Password123\",\n  \"role\": \"player\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Kullanıcı girişi. Player veya Coach rolü ile giriş yapılabilir. Başarılı giriş sonrası token otomatik olarak environment'a kaydedilir."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh"]
+            },
+            "description": "Access token'ı yenilemek için kullanılır. Refresh token ile yeni bir access token alınır."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Kullanıcı çıkışı. Supabase'de token'lar client tarafında invalidate edilir."
+          },
+          "response": []
+        },
+        {
+          "name": "Register Player",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newplayer@example.com\",\n  \"password\": \"Password123\",\n  \"fullName\": \"John Doe\",\n  \"teamId\": \"{{team_id}}\",\n  \"position\": \"QB\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Yeni player kaydı. Database trigger'ları otomatik olarak profile ve team assignment oluşturur.\n\nPosition değerleri: QB, RB, FB, WR, TE, OL, C, G, T, DL, DE, DT, LB, ILB, OLB, DB, CB, S, FS, SS, K, P, LS"
+          },
+          "response": []
+        },
+        {
+          "name": "Invite Coach",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"coach@example.com\",\n  \"fullName\": \"Coach Smith\",\n  \"teamId\": \"{{team_id}}\",\n  \"position\": \"Head Coach\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/invite-coach",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "invite-coach"]
+            },
+            "description": "Coach davet etme. Email ile davet gönderilir.\n\nPosition değerleri: Head Coach, Offensive Coordinator, Defensive Coordinator, Special Teams Coach, Quarterbacks Coach, Running Backs Coach, Wide Receivers Coach, Tight Ends Coach, Offensive Line Coach, Defensive Line Coach, Linebackers Coach, Defensive Backs Coach, Strength and Conditioning Coach, Assistant Coach"
+          },
+          "response": []
+        },
+        {
+          "name": "Set Password (Invited Coach)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"coach@example.com\",\n  \"password\": \"Password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/set-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "set-password"]
+            },
+            "description": "Davet edilmiş coach için şifre belirleme. Database trigger'ları otomatik olarak profile ve team assignment oluşturur."
+          },
+          "response": []
+        },
+        {
+          "name": "Invite Callback (Test)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/invite-callback?access_token=test_token&refresh_token=test_refresh&type=invite",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "invite-callback"],
+              "query": [
+                {
+                  "key": "access_token",
+                  "value": "test_token"
+                },
+                {
+                  "key": "refresh_token",
+                  "value": "test_refresh"
+                },
+                {
+                  "key": "type",
+                  "value": "invite"
+                }
+              ]
+            },
+            "description": "Test endpoint'i. Production'da frontend tarafından handle edilir."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Profiles",
+      "item": [
+        {
+          "name": "Get Player Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profiles/players/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["profiles", "players", "{{user_id}}"]
+            },
+            "description": "Player profil bilgilerini getirir. Auth token gereklidir. PR (Personal Record) bilgileri de dahildir."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Player Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"John Doe Updated\",\n  \"jerseyNumber\": 7,\n  \"position\": \"QB\",\n  \"dominantHand\": \"right\",\n  \"heightCm\": 185,\n  \"weightKg\": 90,\n  \"bio\": \"Updated bio text\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/profiles/players/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["profiles", "players", "{{user_id}}"]
+            },
+            "description": "Player profil bilgilerini günceller. Sadece kendi profilini güncelleyebilir. Player role gereklidir.\n\nDominant hand: left, right, ambidextrous"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Coach Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profiles/coaches/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["profiles", "coaches", "{{user_id}}"]
+            },
+            "description": "Coach profil bilgilerini getirir. Auth token gereklidir."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Coach Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Coach Smith Updated\",\n  \"bio\": \"Updated coach bio\",\n  \"certifications\": [\"USAF Level 2\", \"QB Mechanics Specialist\"],\n  \"preferredPositions\": [\"Quarterback\", \"Wide Receiver\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/profiles/coaches/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["profiles", "coaches", "{{user_id}}"]
+            },
+            "description": "Coach profil bilgilerini günceller. Sadece kendi profilini güncelleyebilir. Coach role gereklidir."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Teams",
+      "item": [
+        {
+          "name": "Get Team",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/teams/{{team_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["teams", "{{team_id}}"]
+            },
+            "description": "Team bilgilerini getirir. Auth token gereklidir. Roster sayıları ve customization bilgileri dahildir."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Team Customization",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"heroTitle\": \"Finish Every Rep\",\n  \"heroMessage\": \"Discipline, execution, and heart define the Gridiron Lions.\",\n  \"highlightIds\": [\"highlight-1\", \"highlight-2\"],\n  \"announcements\": [\n    {\n      \"id\": \"announcement-1\",\n      \"title\": \"Week 3 Game Tape\",\n      \"body\": \"Upload your positional notes before Friday 6 PM.\",\n      \"publishedAt\": \"2025-09-14T09:00:00.000Z\"\n    }\n  ],\n  \"resources\": [\n    {\n      \"label\": \"Offensive Playbook\",\n      \"url\": \"https://example.com/playbook.pdf\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/teams/{{team_id}}/customization",
+              "host": ["{{base_url}}"],
+              "path": ["teams", "{{team_id}}", "customization"]
+            },
+            "description": "Team customization ayarlarını günceller. Coach role gereklidir."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Team Trainings",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/teams/{{team_id}}/trainings",
+              "host": ["{{base_url}}"],
+              "path": ["teams", "{{team_id}}", "trainings"]
+            },
+            "description": "Team antrenmanlarını getirir. Auth token gereklidir."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Team Highlights",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/teams/{{team_id}}/highlights",
+              "host": ["{{base_url}}"],
+              "path": ["teams", "{{team_id}}", "highlights"]
+            },
+            "description": "Team highlight videolarını getirir. Auth token gereklidir."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3001/api",
+      "type": "string"
+    }
+  ]
+}
