@@ -1,7 +1,14 @@
 import { z } from 'zod';
 
 // Lift type constants
-export const liftTypes = ['Bench Press', 'Squat', 'Deadlift', 'Overhead Press'] as const;
+export const liftTypes = [
+  'Bench Press',
+  'Squat',
+  'Deadlift',
+  'Overhead Press',
+  'Clean',
+  '40-Yard Dash',
+] as const;
 
 export type LiftType = (typeof liftTypes)[number];
 
@@ -18,6 +25,8 @@ export const playerPrsSchema = z.object({
   squat: prValueSchema.nullable(),
   deadlift: prValueSchema.nullable(),
   overheadPress: prValueSchema.nullable(),
+  clean: prValueSchema.nullable(),
+  fortyYardDash: prValueSchema.nullable(),
 });
 
 export type PlayerPrs = z.infer<typeof playerPrsSchema>;

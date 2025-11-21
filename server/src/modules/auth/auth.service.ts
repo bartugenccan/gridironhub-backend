@@ -76,7 +76,6 @@ export const registerPlayer = async (
   password: string,
   fullName: string,
   teamId: string,
-  position: PlayerPosition,
 ): Promise<AuthResponse> => {
   // Validate team exists
   const { data: team, error: teamError } = await supabaseAdmin
@@ -89,7 +88,7 @@ export const registerPlayer = async (
     throw badRequest('Team not found');
   }
 
-  // Create user with role: player in metadata, including team_id and position
+  // Create user with role: player in metadata, including team_id
   const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
@@ -98,7 +97,6 @@ export const registerPlayer = async (
       role: 'player',
       full_name: fullName,
       team_id: teamId,
-      position: position,
     },
   });
 
@@ -112,13 +110,12 @@ export const registerPlayer = async (
   const userId = createData.user.id;
 
   // Insert or update player profile
-  // Note: Trigger creates the profile automatically, but we need to set position
+  // Note: Trigger creates the profile automatically
   // Use upsert to handle both cases (trigger created it or not)
   const { error: profileError } = await supabaseAdmin.from('player_profiles').upsert(
     {
       user_id: userId,
       full_name: fullName,
-      position: position,
     } as Database['public']['Tables']['player_profiles']['Insert'],
     {
       onConflict: 'user_id',
@@ -138,7 +135,6 @@ export const registerPlayer = async (
     user_id: userId,
     role: 'player',
     status: 'active',
-    primary_position: position,
   } as Database['public']['Tables']['team_members']['Insert']);
 
   if (assignmentError) {

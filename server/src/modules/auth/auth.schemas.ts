@@ -27,31 +27,6 @@ export const registerBodySchema = z.object({
     .min(2, 'Full name must be at least 2 characters')
     .max(100, 'Full name must be less than 100 characters'),
   teamId: z.string().uuid('Team ID must be a valid UUID'),
-  position: z.enum([
-    'QB',
-    'RB',
-    'FB',
-    'WR',
-    'TE',
-    'OL',
-    'C',
-    'G',
-    'T',
-    'DL',
-    'DE',
-    'DT',
-    'LB',
-    'ILB',
-    'OLB',
-    'DB',
-    'CB',
-    'S',
-    'FS',
-    'SS',
-    'K',
-    'P',
-    'LS',
-  ]),
 });
 
 export type RegisterBody = z.infer<typeof registerBodySchema>;
