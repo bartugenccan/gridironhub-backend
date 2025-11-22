@@ -16,8 +16,21 @@ export interface PersonalRecord {
   recordedAt: string;
 }
 
+export const ALLOWED_EXERCISES = [
+  'Bench Press',
+  'Squat',
+  'Clean',
+  'Deadlift',
+  'Overhead Press',
+  '40 Yard Dash',
+] as const;
+
+export type AllowedExercise = (typeof ALLOWED_EXERCISES)[number];
+
 export const createStrengthLogSchema = z.object({
-  liftName: z.string().min(1, 'Lift name is required'),
+  liftName: z.enum(ALLOWED_EXERCISES, {
+    message: 'Invalid exercise name',
+  }),
   oneRepMax: z.number().positive('One rep max must be a positive number'),
   recordedAt: z.string().datetime().optional(),
   notes: z.string().optional(),
