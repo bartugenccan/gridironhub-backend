@@ -27,6 +27,7 @@ export const getPersonalRecords = async (userId: string): Promise<PersonalRecord
   });
 
   return Array.from(recordsMap.values()).map((log) => ({
+    id: log.id,
     liftName: log.lift_name,
     oneRepMax: Number(log.one_rep_max),
     recordedAt: log.recorded_at,

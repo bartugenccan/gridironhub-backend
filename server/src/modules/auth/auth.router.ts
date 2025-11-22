@@ -22,11 +22,42 @@ import {
 } from './auth.schemas';
 
 import { requireAuth } from '../../middleware/auth-context';
+import { supabaseAdmin } from '../../lib/supabase';
 
 export const authRouter = Router();
 
-authRouter.get('/me', requireAuth, (req, res) => {
-  return res.status(200).json({ user: req.user });
+authRouter.get('/me', requireAuth, async (req, res, next) => {
+  try {
+    const user = req.user!;
+    const metadata = user.metadata ?? {};
+    const teamId = typeof metadata.team_id === 'string' ? metadata.team_id.trim() : '';
+
+    let teamName = '';
+    if (teamId) {
+      const { data: team } = await supabaseAdmin
+        .from('teams')
+        .select('name')
+        .eq('id', teamId)
+        .single();
+
+      if (team) {
+        teamName = (team as any).name;
+      }
+    }
+
+    return res.status(200).json({
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        fullName: typeof metadata.full_name === 'string' ? metadata.full_name : '',
+        teamId,
+        teamName,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
 });
 
 authRouter.post('/login', validateRequest({ body: loginBodySchema }), async (req, res, next) => {
