@@ -4,9 +4,10 @@ export interface AuthenticatedUser {
   id: string;
   email: string;
   role: UserRole;
-  fullName: string;
-  teamId: string;
-  teamName: string;
+  fullName?: string;
+  teamId?: string;
+  teamName?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface SessionPayload {
