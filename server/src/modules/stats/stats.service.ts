@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '../../lib/supabase';
 import { badRequest } from '../../utils/http-error';
-import type { PersonalRecord, StrengthLog } from './stats.types';
+import type { CreateStrengthLogDTO, PersonalRecord, StrengthLog } from './stats.types';
 
 export const getPersonalRecords = async (userId: string): Promise<PersonalRecord[]> => {
   const { data, error } = await supabaseAdmin
@@ -31,4 +31,42 @@ export const getPersonalRecords = async (userId: string): Promise<PersonalRecord
     oneRepMax: Number(log.one_rep_max),
     recordedAt: log.recorded_at,
   }));
+};
+
+export const addStrengthLog = async (
+  userId: string,
+  data: CreateStrengthLogDTO,
+): Promise<StrengthLog> => {
+  const { data: newLog, error } = await supabaseAdmin
+    .from('strength_logs')
+    .insert({
+      user_id: userId,
+      lift_name: data.liftName,
+      one_rep_max: data.oneRepMax,
+      recorded_at: data.recordedAt || new Date().toISOString(),
+      notes: data.notes,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw badRequest(`Failed to add strength log: ${error.message}`);
+  }
+
+  return newLog as unknown as StrengthLog;
+};
+
+export const getLiftHistory = async (userId: string, liftName: string): Promise<StrengthLog[]> => {
+  const { data, error } = await supabaseAdmin
+    .from('strength_logs')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('lift_name', liftName)
+    .order('recorded_at', { ascending: true });
+
+  if (error) {
+    throw badRequest(`Failed to fetch lift history: ${error.message}`);
+  }
+
+  return (data || []) as unknown as StrengthLog[];
 };
