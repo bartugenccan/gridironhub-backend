@@ -1,5 +1,7 @@
 import type { RequestHandler } from 'express';
-import { getUserFromAccessToken } from '../lib/supabase';
+import jwt from 'jsonwebtoken';
+import { env } from '../config/env';
+import { createSupabaseClient } from '../lib/supabase';
 import { unauthorized } from '../utils/http-error';
 import type { UserRole } from '../modules/auth/auth.types';
 
@@ -23,8 +25,10 @@ export const attachAuthContext: RequestHandler = async (req, _res, next) => {
   }
 
   try {
-    const { client, user } = await getUserFromAccessToken(token);
-    const metadata = (user.user_metadata ?? {}) as Record<string, unknown>;
+    // Verify token locally
+    const payload = jwt.verify(token, env.SUPABASE_JWT_SECRET) as jwt.JwtPayload;
+
+    const metadata = (payload.user_metadata ?? {}) as Record<string, unknown>;
     const roleValue = metadata['role'];
 
     if (roleValue !== 'coach' && roleValue !== 'player') {
@@ -32,16 +36,22 @@ export const attachAuthContext: RequestHandler = async (req, _res, next) => {
     }
 
     req.user = {
-      id: user.id,
-      email: user.email ?? '',
-      role: roleValue,
+      id: payload.sub as string,
+      email: payload.email as string,
+      role: roleValue as UserRole,
       metadata,
     };
 
-    req.supabase = client;
+    req.supabase = createSupabaseClient(token);
 
     return next();
   } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      return next(unauthorized('Token expired'));
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      return next(unauthorized('Invalid token'));
+    }
     return next(error);
   }
 };

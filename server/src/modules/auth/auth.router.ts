@@ -21,7 +21,13 @@ import {
   type SetPasswordBody,
 } from './auth.schemas';
 
+import { requireAuth } from '../../middleware/auth-context';
+
 export const authRouter = Router();
+
+authRouter.get('/me', requireAuth, (req, res) => {
+  return res.status(200).json({ user: req.user });
+});
 
 authRouter.post('/login', validateRequest({ body: loginBodySchema }), async (req, res, next) => {
   const { email, password, role } = req.body as LoginBody;
