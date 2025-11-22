@@ -1,8 +1,9 @@
-import type { Session, User } from '@supabase/supabase-js';
+import { createClient, type Session, type User } from '@supabase/supabase-js';
 import { supabaseAdmin } from '../../lib/supabase';
+import { env } from '../../config/env';
 import { logger } from '../../lib/logger';
 import { badRequest, forbidden, unauthorized } from '../../utils/http-error';
-import type { AuthResponse, SessionPayload, UserRole } from './auth.types';
+import type { AuthResponse, SessionPayload, UserRole, AuthenticatedUser } from './auth.types';
 import type { Database } from '../../types/supabase';
 import { PlayerPosition } from './auth.schemas';
 
@@ -22,19 +23,25 @@ const mapSession = (session: Session): SessionPayload => ({
   tokenType: session.token_type ?? 'bearer',
 });
 
-const mapUser = (user: User) => ({
-  id: user.id,
-  email: user.email ?? '',
-  role: mapRole(user),
-  metadata: (user.user_metadata ?? {}) as Record<string, unknown>,
-});
+const mapUser = (user: User, teamName: string): AuthenticatedUser => {
+  const metadata = (user.user_metadata ?? {}) as Record<string, unknown>;
+  return {
+    id: user.id,
+    email: user.email ?? '',
+    role: mapRole(user),
+    fullName: typeof metadata.full_name === 'string' ? metadata.full_name : '',
+    teamId: typeof metadata.team_id === 'string' ? metadata.team_id.trim() : '',
+    teamName,
+  };
+};
 
 export const signInWithPassword = async (
   email: string,
   password: string,
   expectedRole: UserRole,
 ): Promise<AuthResponse> => {
-  const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+  const authClient = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+  const { data, error } = await authClient.auth.signInWithPassword({
     email,
     password,
   });
@@ -43,7 +50,23 @@ export const signInWithPassword = async (
     throw unauthorized('Invalid credentials');
   }
 
-  const user = mapUser(data.user);
+  const metadata = (data.user.user_metadata ?? {}) as Record<string, unknown>;
+  const teamId = typeof metadata.team_id === 'string' ? metadata.team_id.trim() : '';
+
+  let teamName = '';
+  if (teamId) {
+    const { data: team } = await supabaseAdmin
+      .from('teams')
+      .select('name')
+      .eq('id', teamId)
+      .single();
+
+    if (team) {
+      teamName = (team as any).name;
+    }
+  }
+
+  const user = mapUser(data.user, teamName);
 
   if (user.role !== expectedRole) {
     throw forbidden('Role mismatch for this account');
@@ -76,12 +99,11 @@ export const registerPlayer = async (
   password: string,
   fullName: string,
   teamId: string,
-  position: PlayerPosition,
 ): Promise<AuthResponse> => {
   // Validate team exists
   const { data: team, error: teamError } = await supabaseAdmin
     .from('teams')
-    .select('id')
+    .select('id, name')
     .eq('id', teamId)
     .single();
 
@@ -89,7 +111,7 @@ export const registerPlayer = async (
     throw badRequest('Team not found');
   }
 
-  // Create user with role: player in metadata, including team_id and position
+  // Create user with role: player in metadata, including team_id
   const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
@@ -98,7 +120,6 @@ export const registerPlayer = async (
       role: 'player',
       full_name: fullName,
       team_id: teamId,
-      position: position,
     },
   });
 
@@ -112,13 +133,12 @@ export const registerPlayer = async (
   const userId = createData.user.id;
 
   // Insert or update player profile
-  // Note: Trigger creates the profile automatically, but we need to set position
+  // Note: Trigger creates the profile automatically
   // Use upsert to handle both cases (trigger created it or not)
   const { error: profileError } = await supabaseAdmin.from('player_profiles').upsert(
     {
       user_id: userId,
       full_name: fullName,
-      position: position,
     } as Database['public']['Tables']['player_profiles']['Insert'],
     {
       onConflict: 'user_id',
@@ -138,7 +158,6 @@ export const registerPlayer = async (
     user_id: userId,
     role: 'player',
     status: 'active',
-    primary_position: position,
   } as Database['public']['Tables']['team_members']['Insert']);
 
   if (assignmentError) {
@@ -150,7 +169,8 @@ export const registerPlayer = async (
   }
 
   // Sign in to get session
-  const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
+  const authClient = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+  const { data: signInData, error: signInError } = await authClient.auth.signInWithPassword({
     email,
     password,
   });
@@ -161,7 +181,7 @@ export const registerPlayer = async (
 
   return {
     session: mapSession(signInData.session),
-    user: mapUser(signInData.user),
+    user: mapUser(signInData.user, (team as any).name),
   };
 };
 

@@ -4,6 +4,7 @@ import { attachAuthContext } from '../middleware/auth-context';
 import { authRouter } from '../modules/auth/auth.router';
 import { profilesRouter } from '../modules/profiles/profiles.router';
 import { teamsRouter } from '../modules/teams/teams.router';
+import { statsRouter } from '../modules/stats/stats.router';
 
 export const registerRoutes = (app: Express) => {
   const api = Router();
@@ -17,6 +18,7 @@ export const registerRoutes = (app: Express) => {
   api.use('/auth', authRouter);
   api.use('/profiles', profilesRouter);
   api.use('/teams', teamsRouter);
+  api.use('/stats', statsRouter);
 
   app.use('/api', api);
 };
