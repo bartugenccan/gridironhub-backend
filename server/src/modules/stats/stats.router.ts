@@ -1,5 +1,10 @@
 import { Router } from 'express';
-import { addStrengthLog, getLiftHistory, getPersonalRecords } from './stats.service';
+import {
+  addStrengthLog,
+  deleteStrengthLog,
+  getLiftHistory,
+  getPersonalRecords,
+} from './stats.service';
 import { createStrengthLogSchema } from './stats.types';
 import { badRequest } from '../../utils/http-error';
 import { requireAuth } from '../../middleware/auth-context';
@@ -22,6 +27,22 @@ statsRouter.post('/personal-records', requireAuth, async (req, res, next) => {
     const validatedData = createStrengthLogSchema.parse(req.body);
     const newLog = await addStrengthLog(userId, validatedData);
     return res.status(201).json(newLog);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+statsRouter.delete('/personal-records/:id', requireAuth, async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
+    const { id } = req.params;
+
+    if (!id) {
+      throw badRequest('Record ID is required');
+    }
+
+    await deleteStrengthLog(userId, id);
+    return res.status(204).send();
   } catch (error) {
     return next(error);
   }

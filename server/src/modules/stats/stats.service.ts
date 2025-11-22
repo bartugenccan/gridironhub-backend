@@ -70,3 +70,23 @@ export const getLiftHistory = async (userId: string, liftName: string): Promise<
 
   return (data || []) as unknown as StrengthLog[];
 };
+
+export const deleteStrengthLog = async (userId: string, logId: string): Promise<void> => {
+  // First check if the log exists and belongs to the user
+  const { data: existingLog, error: fetchError } = await supabaseAdmin
+    .from('strength_logs')
+    .select('id')
+    .eq('id', logId)
+    .eq('user_id', userId)
+    .single();
+
+  if (fetchError || !existingLog) {
+    throw badRequest('Log not found or access denied');
+  }
+
+  const { error } = await supabaseAdmin.from('strength_logs').delete().eq('id', logId);
+
+  if (error) {
+    throw badRequest(`Failed to delete strength log: ${error.message}`);
+  }
+};
