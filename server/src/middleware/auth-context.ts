@@ -39,6 +39,7 @@ export const attachAuthContext: RequestHandler = async (req, _res, next) => {
       id: payload.sub as string,
       email: payload.email as string,
       role: roleValue as UserRole,
+      teamId: typeof metadata.team_id === 'string' ? metadata.team_id.trim() : undefined,
       metadata,
     };
 

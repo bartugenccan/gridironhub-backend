@@ -22,93 +22,85 @@ export const getTeamRoster = async (teamId: string): Promise<RosterResponse> => 
       throw notFound('Team not found');
     }
 
-    // Fetch active players with their profiles
-    const { data: playerMembers, error: playersError } = await supabaseAdmin
+    // Fetch all active team members
+    const { data: teamMembers, error: membersError } = await supabaseAdmin
       .from('team_members')
-      .select(
-        `
-        user_id,
-        primary_position,
-        jersey_number,
-        player_profiles!inner(full_name)
-      `,
-      )
+      .select('user_id, role, primary_position, jersey_number')
       .eq('team_id', teamId)
-      .eq('role', 'player')
       .eq('status', 'active');
 
-    if (playersError) {
-      logger.error({ error: playersError, teamId }, 'Failed to fetch players');
-      throw playersError;
+    if (membersError) {
+      logger.error({ error: membersError, teamId }, 'Failed to fetch team members');
+      throw membersError;
     }
 
-    // Fetch active coaches with their profiles
-    const { data: coachMembers, error: coachesError } = await supabaseAdmin
-      .from('team_members')
-      .select(
-        `
-        user_id,
-        primary_position,
-        coach_profiles!inner(full_name)
-      `,
-      )
-      .eq('team_id', teamId)
-      .eq('role', 'coach')
-      .eq('status', 'active');
-
-    if (coachesError) {
-      logger.error({ error: coachesError, teamId }, 'Failed to fetch coaches');
-      throw coachesError;
+    if (!teamMembers || teamMembers.length === 0) {
+      return {
+        teamId,
+        coaches: [],
+        players: [],
+      };
     }
+
+    // Separate player and coach user IDs
+    const playerUserIds = teamMembers.filter((m) => m.role === 'player').map((m) => m.user_id);
+    const coachUserIds = teamMembers.filter((m) => m.role === 'coach').map((m) => m.user_id);
 
     const players: PlayerRosterMember[] = [];
     const coaches: CoachRosterMember[] = [];
 
-    // Process players
-    if (playerMembers) {
-      for (const member of playerMembers) {
-        const playerData = member as {
-          user_id: string;
-          primary_position: string | null;
-          jersey_number: number | null;
-          player_profiles: { full_name: string | null }[];
-        };
+    // Fetch player profiles if there are any players
+    if (playerUserIds.length > 0) {
+      const { data: playerProfiles, error: playerProfilesError } = await supabaseAdmin
+        .from('player_profiles')
+        .select('user_id, full_name')
+        .in('user_id', playerUserIds);
 
-        const fullName =
-          playerData.player_profiles && playerData.player_profiles.length > 0
-            ? playerData.player_profiles[0].full_name || 'Unknown Player'
-            : 'Unknown Player';
+      if (playerProfilesError) {
+        logger.error({ error: playerProfilesError, teamId }, 'Failed to fetch player profiles');
+      } else if (playerProfiles) {
+        // Create a map of user_id to profile
+        const profileMap = new Map(
+          playerProfiles.map((p) => [p.user_id, p.full_name || 'Unknown Player']),
+        );
 
-        players.push({
-          id: playerData.user_id,
-          fullName,
-          role: 'player',
-          jerseyNumber: playerData.jersey_number,
-          position: playerData.primary_position,
-        });
+        // Build player roster members
+        for (const member of teamMembers.filter((m) => m.role === 'player')) {
+          players.push({
+            id: member.user_id,
+            fullName: profileMap.get(member.user_id) || 'Unknown Player',
+            role: 'player',
+            jerseyNumber: member.jersey_number,
+            position: member.primary_position,
+          });
+        }
       }
     }
 
-    // Process coaches
-    if (coachMembers) {
-      for (const member of coachMembers) {
-        const coachData = member as {
-          user_id: string;
-          primary_position: string | null;
-          coach_profiles: { full_name: string | null }[];
-        };
+    // Fetch coach profiles if there are any coaches
+    if (coachUserIds.length > 0) {
+      const { data: coachProfiles, error: coachProfilesError } = await supabaseAdmin
+        .from('coach_profiles')
+        .select('user_id, full_name')
+        .in('user_id', coachUserIds);
 
-        const fullName =
-          coachData.coach_profiles && coachData.coach_profiles.length > 0
-            ? coachData.coach_profiles[0].full_name || 'Unknown Coach'
-            : 'Unknown Coach';
+      if (coachProfilesError) {
+        logger.error({ error: coachProfilesError, teamId }, 'Failed to fetch coach profiles');
+      } else if (coachProfiles) {
+        // Create a map of user_id to profile
+        const profileMap = new Map(
+          coachProfiles.map((p) => [p.user_id, p.full_name || 'Unknown Coach']),
+        );
 
-        coaches.push({
-          id: coachData.user_id,
-          fullName,
-          role: 'coach',
-          primaryPosition: coachData.primary_position,
-        });
+        // Build coach roster members
+        for (const member of teamMembers.filter((m) => m.role === 'coach')) {
+          coaches.push({
+            id: member.user_id,
+            fullName: profileMap.get(member.user_id) || 'Unknown Coach',
+            role: 'coach',
+            primaryPosition: member.primary_position,
+          });
+        }
       }
     }
 
