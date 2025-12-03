@@ -15,9 +15,14 @@ import type {
  * @param userPosition - The user's position (e.g., 'QB', 'WR')
  * @returns WorkoutsResponse containing team workouts and position-specific workouts
  */
+type GetWorkoutsOptions = {
+  includeAllPositions?: boolean;
+};
+
 export const getWorkoutsForUser = async (
   teamId: string,
   userPosition: string | null,
+  options: GetWorkoutsOptions = {},
 ): Promise<WorkoutsResponse> => {
   try {
     // Fetch all active workouts for the team
@@ -55,8 +60,11 @@ export const getWorkoutsForUser = async (
       if (!workout.assigned_to_positions || workout.assigned_to_positions.length === 0) {
         teamWorkouts.push(workoutItem);
       }
-      // Position-specific workout: check if user's position is in the array
-      else if (userPosition && workout.assigned_to_positions.includes(userPosition)) {
+      // Position-specific workouts: include all for coaches or match player position
+      else if (
+        options.includeAllPositions ||
+        (userPosition && workout.assigned_to_positions.includes(userPosition))
+      ) {
         positionWorkouts.push(workoutItem);
       }
     });

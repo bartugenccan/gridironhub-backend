@@ -24,25 +24,32 @@ workoutsRouter.get('/', async (req, res, next) => {
   try {
     const userId = req.user?.id;
     const teamId = req.user?.teamId;
+    const isCoach = req.user?.role === 'coach';
 
     if (!teamId) {
       throw badRequest('User is not assigned to a team');
     }
 
-    // Fetch user's position from team_members table
-    const { data: teamMember, error: memberError } = await supabaseAdmin
-      .from('team_members')
-      .select('primary_position')
-      .eq('user_id', userId)
-      .eq('team_id', teamId)
-      .single();
+    let userPosition: string | null = null;
+    if (!isCoach) {
+      // Fetch player's position only when filtering by position
+      const { data: teamMember, error: memberError } = await supabaseAdmin
+        .from('team_members')
+        .select('primary_position')
+        .eq('user_id', userId)
+        .eq('team_id', teamId)
+        .single();
 
-    if (memberError) {
-      throw badRequest('Failed to fetch user team information');
+      if (memberError) {
+        throw badRequest('Failed to fetch user team information');
+      }
+
+      userPosition = teamMember?.primary_position || null;
     }
 
-    const userPosition = teamMember?.primary_position || null;
-    const workouts = await getWorkoutsForUser(teamId, userPosition);
+    const workouts = await getWorkoutsForUser(teamId, userPosition, {
+      includeAllPositions: isCoach,
+    });
 
     return res.json(workouts);
   } catch (error) {
