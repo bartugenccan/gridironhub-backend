@@ -6,7 +6,7 @@ create table if not exists public.workouts (
   id uuid primary key default gen_random_uuid(),
   team_id uuid not null references public.teams (id) on delete cascade,
   name text not null,
-  description text not null,
+  description text,
   duration_minutes integer not null check (duration_minutes > 0),
   assigned_to_positions text[], -- NULL or empty array means team-wide workout
   difficulty_level text check (difficulty_level in ('beginner', 'intermediate', 'advanced')),
