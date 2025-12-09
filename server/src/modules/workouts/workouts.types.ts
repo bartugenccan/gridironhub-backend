@@ -5,7 +5,7 @@ export interface Workout {
   id: string;
   team_id: string;
   name: string;
-  description: string;
+  description: string | null;
   duration_minutes: number;
   assigned_to_positions: string[] | null;
   difficulty_level: string | null;
@@ -27,7 +27,7 @@ export interface WorkoutListItem {
 export interface WorkoutDetail {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   durationMinutes: number;
   assignedToPositions: string[] | null;
   difficultyLevel: string | null;
@@ -44,7 +44,7 @@ export interface WorkoutsResponse {
 // Zod schemas for validation
 export const createWorkoutSchema = z.object({
   name: z.string().min(1, 'Workout name is required').max(100),
-  description: z.string().min(1, 'Description is required'),
+  description: z.string().nullable().optional(),
   durationMinutes: z.number().int().positive('Duration must be a positive number'),
   assignedToPositions: z.array(z.string()).nullable().optional(),
   difficultyLevel: z.enum(['beginner', 'intermediate', 'advanced']).nullable().optional(),
@@ -53,7 +53,7 @@ export const createWorkoutSchema = z.object({
 
 export const updateWorkoutSchema = z.object({
   name: z.string().min(1).max(100).optional(),
-  description: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
   durationMinutes: z.number().int().positive().optional(),
   assignedToPositions: z.array(z.string()).nullable().optional(),
   difficultyLevel: z.enum(['beginner', 'intermediate', 'advanced']).nullable().optional(),
