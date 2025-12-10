@@ -54,6 +54,7 @@ export const getWorkoutsForUser = async (
         name: workout.name,
         durationMinutes: workout.duration_minutes,
         assignedToPositions: workout.assigned_to_positions,
+        scheduledDate: workout.scheduled_date,
       };
 
       // Team workout: no positions assigned or empty array
@@ -112,6 +113,7 @@ export const getWorkoutById = async (workoutId: string, teamId: string): Promise
       equipmentNeeded: workoutData.equipment_needed,
       createdAt: workoutData.created_at,
       updatedAt: workoutData.updated_at,
+      scheduledDate: workoutData.scheduled_date,
     };
   } catch (error) {
     logger.error({ error, workoutId, teamId }, 'Error fetching workout by ID');
@@ -142,6 +144,7 @@ export const createWorkout = async (
         assigned_to_positions: data.assignedToPositions || null,
         difficulty_level: data.difficultyLevel || null,
         equipment_needed: data.equipmentNeeded || null,
+        scheduled_date: data.scheduledDate || null,
         created_by: createdBy,
         is_active: true,
       })
@@ -165,6 +168,7 @@ export const createWorkout = async (
       equipmentNeeded: workoutData.equipment_needed,
       createdAt: workoutData.created_at,
       updatedAt: workoutData.updated_at,
+      scheduledDate: workoutData.scheduled_date,
     };
   } catch (error) {
     logger.error({ error, teamId, createdBy }, 'Error creating workout');
@@ -210,6 +214,7 @@ export const updateWorkout = async (
       updateData.assigned_to_positions = data.assignedToPositions;
     if (data.difficultyLevel !== undefined) updateData.difficulty_level = data.difficultyLevel;
     if (data.equipmentNeeded !== undefined) updateData.equipment_needed = data.equipmentNeeded;
+    if (data.scheduledDate !== undefined) updateData.scheduled_date = data.scheduledDate;
 
     const { data: updatedWorkout, error } = await supabaseAdmin
       .from('workouts')
@@ -235,6 +240,7 @@ export const updateWorkout = async (
       equipmentNeeded: workoutData.equipment_needed,
       createdAt: workoutData.created_at,
       updatedAt: workoutData.updated_at,
+      scheduledDate: workoutData.scheduled_date,
     };
   } catch (error) {
     logger.error({ error, workoutId, teamId }, 'Error updating workout');

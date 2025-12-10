@@ -14,6 +14,7 @@ export interface Workout {
   created_at: string;
   updated_at: string;
   is_active: boolean;
+  scheduled_date: string | null;
 }
 
 // API Response types
@@ -22,6 +23,7 @@ export interface WorkoutListItem {
   name: string;
   durationMinutes: number;
   assignedToPositions: string[] | null;
+  scheduledDate: string | null;
 }
 
 export interface WorkoutDetail {
@@ -34,6 +36,7 @@ export interface WorkoutDetail {
   equipmentNeeded: string[] | null;
   createdAt: string;
   updatedAt: string;
+  scheduledDate: string | null;
 }
 
 export interface WorkoutsResponse {
@@ -49,6 +52,11 @@ export const createWorkoutSchema = z.object({
   assignedToPositions: z.array(z.string()).nullable().optional(),
   difficultyLevel: z.enum(['beginner', 'intermediate', 'advanced']).nullable().optional(),
   equipmentNeeded: z.array(z.string()).nullable().optional(),
+  scheduledDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
+    .nullable()
+    .optional(),
 });
 
 export const updateWorkoutSchema = z.object({
@@ -58,6 +66,11 @@ export const updateWorkoutSchema = z.object({
   assignedToPositions: z.array(z.string()).nullable().optional(),
   difficultyLevel: z.enum(['beginner', 'intermediate', 'advanced']).nullable().optional(),
   equipmentNeeded: z.array(z.string()).nullable().optional(),
+  scheduledDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
+    .nullable()
+    .optional(),
 });
 
 export type CreateWorkoutDTO = z.infer<typeof createWorkoutSchema>;
