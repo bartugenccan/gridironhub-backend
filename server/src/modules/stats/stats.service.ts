@@ -1,6 +1,15 @@
 import { supabaseAdmin } from '../../lib/supabase';
-import { badRequest } from '../../utils/http-error';
-import type { CreateStrengthLogDTO, PersonalRecord, StrengthLog } from './stats.types';
+import { badRequest, notFound } from '../../utils/http-error';
+import type {
+  CreateStrengthLogDTO,
+  PersonalRecord,
+  StrengthLog,
+  CreatePrRequestDTO,
+  PrRequest,
+  PrRequestStatus,
+  UpdatePrRequestStatusDTO,
+} from './stats.types';
+import { deleteFile } from '../../lib/storage';
 
 export const getPersonalRecords = async (userId: string): Promise<PersonalRecord[]> => {
   const { data, error } = await supabaseAdmin
@@ -90,4 +99,120 @@ export const deleteStrengthLog = async (userId: string, logId: string): Promise<
   if (error) {
     throw badRequest(`Failed to delete strength log: ${error.message}`);
   }
+};
+
+// PR Requests
+
+export const createPrRequest = async (
+  userId: string,
+  data: CreatePrRequestDTO,
+): Promise<PrRequest> => {
+  const { data: newRequest, error } = await supabaseAdmin
+    .from('pr_requests')
+    .insert({
+      user_id: userId,
+      lift_name: data.liftName,
+      value: data.value,
+      video_url: data.videoUrl,
+      status: 'pending',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw badRequest(`Failed to create PR request: ${error.message}`);
+  }
+
+  return newRequest as unknown as PrRequest;
+};
+
+export const getPendingPrRequests = async (): Promise<PrRequest[]> => {
+  // Join with player profiles to get names
+  const { data, error } = await supabaseAdmin
+    .from('pr_requests')
+    .select(
+      `
+      *,
+      user:player_profiles(full_name)
+    `,
+    )
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw badRequest(`Failed to fetch pending PR requests: ${error.message}`);
+  }
+
+  return data.map((req: any) => ({
+    ...req,
+    player_name: req.user?.full_name || 'Unknown Player',
+  })) as unknown as PrRequest[];
+};
+
+export const updatePrRequestStatus = async (
+  requestId: string,
+  data: UpdatePrRequestStatusDTO,
+): Promise<PrRequest> => {
+  // 1. Fetch the request
+  const { data: request, error: fetchError } = await supabaseAdmin
+    .from('pr_requests')
+    .select('*')
+    .eq('id', requestId)
+    .single();
+
+  if (fetchError || !request) {
+    throw notFound('PR Request not found');
+  }
+
+  if (request.status !== 'pending') {
+    throw badRequest('Request is already processed');
+  }
+
+  // 2. If approved, add to strength_logs
+  if (data.status === 'approved') {
+    await addStrengthLog(request.user_id, {
+      liftName: request.lift_name,
+      oneRepMax: request.value,
+      recordedAt: new Date().toISOString(),
+      notes: `Approved PR Request. Coach notes: ${data.coachNotes || 'None'}`,
+    });
+  }
+
+  // 3. Delete video if it exists (for both approved and rejected)
+  if (request.video_url) {
+    try {
+      // Extract file path from public URL
+      // URL Format: .../storage/v1/object/public/pr-videos/USER_ID/FILENAME
+      const urlParts = request.video_url.split('/pr-videos/');
+      if (urlParts.length === 2) {
+        const filePath = urlParts[1];
+        try {
+          await deleteFile('pr-videos', filePath);
+        } catch (err) {
+          console.error('Failed to delete PR video:', err);
+          // Non-critical error
+        }
+      }
+    } catch (err) {
+      console.error('Error processing video deletion:', err);
+    }
+  }
+
+  // 4. Update request status
+  const { data: updatedRequest, error: updateError } = await supabaseAdmin
+    .from('pr_requests')
+    .update({
+      status: data.status,
+      coach_notes: data.coachNotes,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', requestId)
+    .select()
+    .single();
+
+  if (updateError) {
+    throw badRequest(`Failed to update request status: ${updateError.message}`);
+  }
+
+  return updatedRequest as unknown as PrRequest;
 };
