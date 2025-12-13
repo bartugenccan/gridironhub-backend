@@ -114,6 +114,7 @@ export const getWorkoutById = async (workoutId: string, teamId: string): Promise
       createdAt: workoutData.created_at,
       updatedAt: workoutData.updated_at,
       scheduledDate: workoutData.scheduled_date,
+      youtubeUrl: workoutData.youtube_url,
     };
   } catch (error) {
     logger.error({ error, workoutId, teamId }, 'Error fetching workout by ID');
@@ -147,6 +148,7 @@ export const createWorkout = async (
         scheduled_date: data.scheduledDate || null,
         created_by: createdBy,
         is_active: true,
+        youtube_url: data.youtubeUrl || null,
       })
       .select()
       .single();
@@ -169,6 +171,7 @@ export const createWorkout = async (
       createdAt: workoutData.created_at,
       updatedAt: workoutData.updated_at,
       scheduledDate: workoutData.scheduled_date,
+      youtubeUrl: workoutData.youtube_url,
     };
   } catch (error) {
     logger.error({ error, teamId, createdBy }, 'Error creating workout');
@@ -215,6 +218,7 @@ export const updateWorkout = async (
     if (data.difficultyLevel !== undefined) updateData.difficulty_level = data.difficultyLevel;
     if (data.equipmentNeeded !== undefined) updateData.equipment_needed = data.equipmentNeeded;
     if (data.scheduledDate !== undefined) updateData.scheduled_date = data.scheduledDate;
+    if (data.youtubeUrl !== undefined) updateData.youtube_url = data.youtubeUrl;
 
     const { data: updatedWorkout, error } = await supabaseAdmin
       .from('workouts')
@@ -241,6 +245,7 @@ export const updateWorkout = async (
       createdAt: workoutData.created_at,
       updatedAt: workoutData.updated_at,
       scheduledDate: workoutData.scheduled_date,
+      youtubeUrl: workoutData.youtube_url,
     };
   } catch (error) {
     logger.error({ error, workoutId, teamId }, 'Error updating workout');

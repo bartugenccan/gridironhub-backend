@@ -15,6 +15,7 @@ export interface Workout {
   updated_at: string;
   is_active: boolean;
   scheduled_date: string | null;
+  youtube_url: string | null;
 }
 
 // API Response types
@@ -37,6 +38,7 @@ export interface WorkoutDetail {
   createdAt: string;
   updatedAt: string;
   scheduledDate: string | null;
+  youtubeUrl: string | null;
 }
 
 export interface WorkoutsResponse {
@@ -57,6 +59,7 @@ export const createWorkoutSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
     .nullable()
     .optional(),
+  youtubeUrl: z.url().optional().or(z.literal('')),
 });
 
 export const updateWorkoutSchema = z.object({
@@ -71,6 +74,7 @@ export const updateWorkoutSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
     .nullable()
     .optional(),
+  youtubeUrl: z.url().optional().or(z.literal('')),
 });
 
 export type CreateWorkoutDTO = z.infer<typeof createWorkoutSchema>;

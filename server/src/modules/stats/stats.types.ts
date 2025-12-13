@@ -37,3 +37,40 @@ export const createStrengthLogSchema = z.object({
 });
 
 export type CreateStrengthLogDTO = z.infer<typeof createStrengthLogSchema>;
+
+export enum PrRequestStatus {
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
+}
+
+export interface PrRequest {
+  id: string;
+  user_id: string;
+  lift_name: string;
+  value: number;
+  video_url?: string | null;
+  status: PrRequestStatus;
+  coach_notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joins
+  player_name?: string; // For display purposes
+}
+
+export const createPrRequestSchema = z.object({
+  liftName: z.enum(ALLOWED_EXERCISES, {
+    message: 'Invalid exercise name',
+  }),
+  value: z.number().positive('Value must be a positive number'),
+  videoUrl: z.string().url().optional().or(z.literal('')),
+});
+
+export type CreatePrRequestDTO = z.infer<typeof createPrRequestSchema>;
+
+export const updatePrRequestStatusSchema = z.object({
+  status: z.enum([PrRequestStatus.APPROVED, PrRequestStatus.REJECTED]),
+  coachNotes: z.string().optional(),
+});
+
+export type UpdatePrRequestStatusDTO = z.infer<typeof updatePrRequestStatusSchema>;
