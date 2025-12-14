@@ -70,3 +70,13 @@ export const playerProfileResponseSchema = z.object({
 });
 
 export type PlayerProfileResponse = z.infer<typeof playerProfileResponseSchema>;
+
+export const coachProfileResponseSchema = z.object({
+  id: z.string().uuid(),
+  fullName: z.string().nullable(),
+  bio: z.string().nullable(),
+  certifications: z.array(z.string()).nullable(),
+  preferredPositions: z.array(z.string()).nullable(),
+});
+
+export type CoachProfileResponse = z.infer<typeof coachProfileResponseSchema>;

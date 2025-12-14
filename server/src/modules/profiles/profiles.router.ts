@@ -9,6 +9,7 @@ import {
   type CoachProfileUpdate,
   type PlayerProfileUpdate,
   type PlayerProfileResponse,
+  type CoachProfileResponse,
 } from './profiles.schemas';
 import { getPlayerPrs } from './profiles.service';
 import { supabaseAdmin } from '../../lib/supabase';
@@ -123,21 +124,50 @@ profilesRouter.patch(
   },
 );
 
-profilesRouter.get('/coaches/:id', validateRequest({ params: profileParamsSchema }), (req, res) => {
-  const { id } = req.params as { id: string };
+profilesRouter.get(
+  '/coaches/:id',
+  validateRequest({ params: profileParamsSchema }),
+  async (req, res, next) => {
+    const { id } = req.params as { id: string };
 
-  return res.json({
-    id,
-    fullName: 'Coach Samantha Lee',
-    bio: 'Head coach emphasizing high-tempo offense and disciplined defense.',
-    certifications: ['USAF Level 2', 'QB Mechanics Specialist'],
-    preferredPositions: ['Quarterback', 'Wide Receiver'],
-    teams: [
-      { id: 'demo-team-1', name: 'Gridiron Lions', role: 'head-coach' },
-      { id: 'demo-team-2', name: 'Gridiron JV Lions', role: 'offensive-coordinator' },
-    ],
-  });
-});
+    try {
+      const { data: coachProfile, error: profileError } = await supabaseAdmin
+        .from('coach_profiles')
+        .select('*')
+        .eq('user_id', id)
+        .single();
+
+      if (profileError) {
+        logger.error({ error: String(profileError), userId: id }, 'Failed to fetch coach profile');
+        throw notFound('Coach profile not found');
+      }
+
+      if (!coachProfile) {
+        throw notFound('Coach profile not found');
+      }
+
+      const profileRow = coachProfile as {
+        user_id: string;
+        full_name: string | null;
+        bio: string | null;
+        certifications: string[] | null;
+        preferred_positions: string[] | null;
+      };
+
+      const response: CoachProfileResponse = {
+        id: profileRow.user_id,
+        fullName: profileRow.full_name ?? null,
+        bio: profileRow.bio ?? null,
+        certifications: profileRow.certifications ?? [],
+        preferredPositions: profileRow.preferred_positions ?? [],
+      };
+
+      return res.json(response);
+    } catch (error) {
+      return next(error);
+    }
+  },
+);
 
 profilesRouter.patch(
   '/coaches/:id',
