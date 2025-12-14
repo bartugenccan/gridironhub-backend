@@ -114,6 +114,7 @@ export const createPrRequest = async (
       lift_name: data.liftName,
       value: data.value,
       video_url: data.videoUrl,
+      strength_log_id: data.strengthLogId,
       status: 'pending',
     })
     .select()
@@ -168,14 +169,32 @@ export const updatePrRequestStatus = async (
     throw badRequest('Request is already processed');
   }
 
-  // 2. If approved, add to strength_logs
+  // 2. If approved, add to strength_logs (or update existing)
   if (data.status === 'approved') {
-    await addStrengthLog(request.user_id, {
-      liftName: request.lift_name,
-      oneRepMax: request.value,
-      recordedAt: new Date().toISOString(),
-      notes: `Approved PR Request. Coach notes: ${data.coachNotes || 'None'}`,
-    });
+    if (request.strength_log_id) {
+      // Update existing log
+      const { error: logUpdateError } = await supabaseAdmin
+        .from('strength_logs')
+        .update({
+          one_rep_max: request.value,
+          notes: `Updated via PR Request. Coach notes: ${data.coachNotes || 'None'}`,
+          // We don't update recorded_at to keep original date, or maybe we should?
+          // Keeping original date seems correct for correcting a typo.
+        })
+        .eq('id', request.strength_log_id);
+
+      if (logUpdateError) {
+        throw badRequest(`Failed to update strength log: ${logUpdateError.message}`);
+      }
+    } else {
+      // Create new log (existing behavior)
+      await addStrengthLog(request.user_id, {
+        liftName: request.lift_name,
+        oneRepMax: request.value,
+        recordedAt: new Date().toISOString(),
+        notes: `Approved PR Request. Coach notes: ${data.coachNotes || 'None'}`,
+      });
+    }
   }
 
   // 3. Delete video if it exists (for both approved and rejected)

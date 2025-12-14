@@ -54,6 +54,7 @@ export interface PrRequest {
   coach_notes?: string | null;
   created_at: string;
   updated_at: string;
+  strength_log_id?: string | null; // For updates to existing logs
   // Joins
   player_name?: string; // For display purposes
 }
@@ -64,6 +65,7 @@ export const createPrRequestSchema = z.object({
   }),
   value: z.number().positive('Value must be a positive number'),
   videoUrl: z.string().url().optional().or(z.literal('')),
+  strengthLogId: z.string().uuid().optional(),
 });
 
 export type CreatePrRequestDTO = z.infer<typeof createPrRequestSchema>;
