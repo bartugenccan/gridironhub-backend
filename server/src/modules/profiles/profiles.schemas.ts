@@ -51,6 +51,7 @@ export const coachProfileUpdateSchema = z.object({
   bio: z.string().max(1000).optional(),
   certifications: z.array(z.string()).optional(),
   preferredPositions: z.array(z.string()).optional(),
+  yearsOfExperience: z.number().int().optional(),
 });
 
 export type PlayerProfileUpdate = z.infer<typeof playerProfileUpdateSchema>;
@@ -77,6 +78,8 @@ export const coachProfileResponseSchema = z.object({
   bio: z.string().nullable(),
   certifications: z.array(z.string()).nullable(),
   preferredPositions: z.array(z.string()).nullable(),
+  currentTeam: z.string().nullable(),
+  yearsOfExperience: z.number().int().nullable(),
 });
 
 export type CoachProfileResponse = z.infer<typeof coachProfileResponseSchema>;

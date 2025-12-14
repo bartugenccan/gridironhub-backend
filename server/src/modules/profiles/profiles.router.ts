@@ -146,12 +146,34 @@ profilesRouter.get(
         throw notFound('Coach profile not found');
       }
 
+      // Fetch coach's active team
+      const { data: teamMember } = await supabaseAdmin
+        .from('team_members')
+        .select('team_id')
+        .eq('user_id', id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      let currentTeamName = null;
+      if (teamMember?.team_id) {
+        const { data: team } = await supabaseAdmin
+          .from('teams')
+          .select('name')
+          .eq('id', teamMember.team_id)
+          .single();
+        if (team) {
+          currentTeamName = (team as { name: string }).name;
+        }
+      }
+
       const profileRow = coachProfile as {
         user_id: string;
         full_name: string | null;
         bio: string | null;
         certifications: string[] | null;
         preferred_positions: string[] | null;
+        current_team: string | null;
+        years_of_experience: number | null;
       };
 
       const response: CoachProfileResponse = {
@@ -160,6 +182,8 @@ profilesRouter.get(
         bio: profileRow.bio ?? null,
         certifications: profileRow.certifications ?? [],
         preferredPositions: profileRow.preferred_positions ?? [],
+        currentTeam: currentTeamName,
+        yearsOfExperience: profileRow.years_of_experience ?? null,
       };
 
       return res.json(response);
