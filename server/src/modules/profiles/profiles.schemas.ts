@@ -38,7 +38,7 @@ export const profileParamsSchema = z.object({
 export const playerProfileUpdateSchema = z.object({
   fullName: z.string().min(1).optional(),
   jerseyNumber: z.number().int().positive().optional(),
-  position: z.string().min(1).optional(),
+  positions: z.array(z.string().min(1)).optional(),
   dominantHand: z.enum(['left', 'right', 'ambidextrous']).optional(),
   heightCm: z.number().int().positive().optional(),
   weightKg: z.number().int().positive().optional(),
@@ -62,7 +62,7 @@ export const playerProfileResponseSchema = z.object({
   id: z.string().uuid(),
   fullName: z.string().nullable(),
   jerseyNumber: z.number().int().nullable(),
-  position: z.string().nullable(),
+  positions: z.array(z.string()).nullable(),
   dominantHand: z.string().nullable(),
   heightCm: z.number().nullable(),
   weightKg: z.number().nullable(),

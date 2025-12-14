@@ -50,7 +50,7 @@ profilesRouter.get(
         user_id: string;
         full_name: string | null;
         jersey_number: number | null;
-        position: string | null;
+        position: string[] | null;
         dominant_hand: string | null;
         height_cm: number | null;
         weight_kg: number | null;
@@ -61,7 +61,7 @@ profilesRouter.get(
         id: profileRow.user_id,
         fullName: profileRow.full_name ?? null,
         jerseyNumber: profileRow.jersey_number ?? null,
-        position: profileRow.position ?? null,
+        positions: profileRow.position ?? [],
         dominantHand: profileRow.dominant_hand ?? null,
         heightCm: profileRow.height_cm ? Number(profileRow.height_cm) : null,
         weightKg: profileRow.weight_kg ? Number(profileRow.weight_kg) : null,
@@ -94,7 +94,7 @@ profilesRouter.patch(
 
       if (payload.fullName !== undefined) updateData.full_name = payload.fullName;
       if (payload.jerseyNumber !== undefined) updateData.jersey_number = payload.jerseyNumber;
-      if (payload.position !== undefined) updateData.position = payload.position;
+      if (payload.positions !== undefined) updateData.position = payload.positions; // Map positions -> position (DB column)
       if (payload.dominantHand !== undefined) updateData.dominant_hand = payload.dominantHand;
       if (payload.heightCm !== undefined) updateData.height_cm = payload.heightCm;
       if (payload.weightKg !== undefined) updateData.weight_kg = payload.weightKg;
