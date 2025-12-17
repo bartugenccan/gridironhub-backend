@@ -197,7 +197,7 @@ profilesRouter.patch(
   '/coaches/:id',
   requireRole('coach'),
   validateRequest({ params: profileParamsSchema, body: coachProfileUpdateSchema }),
-  (req, res) => {
+  async (req, res, next) => {
     const { id } = req.params as { id: string };
     const payload = req.body as CoachProfileUpdate;
 
@@ -205,10 +205,38 @@ profilesRouter.patch(
       throw forbidden('Coaches can only update their own profile');
     }
 
-    return res.json({
-      id,
-      ...payload,
-      updatedAt: new Date().toISOString(),
-    });
+    try {
+      // Build update object with snake_case for database
+      const updateData: Record<string, unknown> = {};
+
+      if (payload.fullName !== undefined) updateData.full_name = payload.fullName;
+      if (payload.bio !== undefined) updateData.bio = payload.bio;
+      if (payload.certifications !== undefined) updateData.certifications = payload.certifications;
+      if (payload.preferredPositions !== undefined)
+        updateData.preferred_positions = payload.preferredPositions;
+      if (payload.yearsOfExperience !== undefined)
+        updateData.years_of_experience = payload.yearsOfExperience;
+
+      // Update coach profile in database
+      const { data: updatedProfile, error: updateError } = await supabaseAdmin
+        .from('coach_profiles')
+        .update(updateData)
+        .eq('user_id', id)
+        .select()
+        .single();
+
+      if (updateError) {
+        logger.error({ error: String(updateError), userId: id }, 'Failed to update coach profile');
+        throw new Error('Failed to update coach profile');
+      }
+
+      return res.json({
+        id,
+        ...payload,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      return next(error);
+    }
   },
 );
