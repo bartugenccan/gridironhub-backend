@@ -10,6 +10,8 @@ import type {
   UpdatePrRequestStatusDTO,
 } from './stats.types';
 import { deleteFile } from '../../lib/storage';
+import { sendPushNotification } from '../../lib/notifications';
+import { logger } from '../../lib/logger';
 
 export const getPersonalRecords = async (userId: string): Promise<PersonalRecord[]> => {
   const { data, error } = await supabaseAdmin
@@ -124,6 +126,60 @@ export const createPrRequest = async (
     throw badRequest(`Failed to create PR request: ${error.message}`);
   }
 
+  // NOTIFICATION TRIGGER: Player -> Coaches
+  try {
+    // 1. Find player's active team
+    const { data: teamMember } = await supabaseAdmin
+      .from('team_members')
+      .select('team_id')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (teamMember?.team_id) {
+      // 2. Find coaches of that team
+      const { data: coaches } = await supabaseAdmin
+        .from('team_members')
+        .select('user_id')
+        .eq('team_id', teamMember.team_id)
+        .eq('role', 'coach')
+        .eq('status', 'active');
+
+      if (coaches && coaches.length > 0) {
+        const coachIds = coaches.map((c) => c.user_id);
+
+        // 3. Get push tokens for these coaches
+        const { data: tokens } = await supabaseAdmin
+          .from('push_tokens')
+          .select('token')
+          .in('user_id', coachIds);
+
+        if (tokens && tokens.length > 0) {
+          const pushTokens = tokens.map((t) => t.token);
+
+          // 4. Get player name for message
+          const { data: profile } = await supabaseAdmin
+            .from('player_profiles')
+            .select('full_name')
+            .eq('user_id', userId)
+            .single();
+
+          const playerName = profile?.full_name || 'A player';
+
+          await sendPushNotification(
+            pushTokens,
+            'New PR Request 🏋️',
+            `${playerName} submitted a new PR for ${data.liftName}`,
+            { requestId: newRequest?.id, type: 'pr_request' },
+          );
+        }
+      }
+    }
+  } catch (err) {
+    logger.error({ error: err }, 'Failed to send PR request notification');
+    // Don't block the request success
+  }
+
   return newRequest as unknown as PrRequest;
 };
 
@@ -231,6 +287,30 @@ export const updatePrRequestStatus = async (
 
   if (updateError) {
     throw badRequest(`Failed to update request status: ${updateError.message}`);
+  }
+
+  // NOTIFICATION TRIGGER: Coach -> Player
+  try {
+    // Only notify if approved (as per user request, though rejected might be useful too)
+    // User request: "Coach Approves PR (Notify Player)"
+    if (data.status === 'approved') {
+      const { data: tokenData } = await supabaseAdmin
+        .from('push_tokens')
+        .select('token')
+        .eq('user_id', request.user_id) // The player
+        .maybeSingle();
+
+      if (tokenData?.token) {
+        await sendPushNotification(
+          [tokenData.token],
+          'PR Onaylandı! 🎉',
+          "Koçunuz PR'ınızı onayladı.",
+          { requestId, type: 'pr_approval' },
+        );
+      }
+    }
+  } catch (err) {
+    logger.error({ error: err }, 'Failed to send PR approval notification');
   }
 
   return updatedRequest as unknown as PrRequest;
