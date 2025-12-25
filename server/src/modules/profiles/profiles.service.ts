@@ -3,7 +3,14 @@ import { logger } from '../../lib/logger';
 import type { PlayerPrs, PrValue } from './profiles.schemas';
 
 // Valid lift names
-const VALID_LIFTS = ['Bench Press', 'Squat', 'Deadlift', 'Overhead Press'] as const;
+const VALID_LIFTS = [
+  'Bench Press',
+  'Squat',
+  'Deadlift',
+  'Overhead Press',
+  'Clean',
+  '40-Yard Dash',
+] as const;
 
 interface StrengthLogRow {
   lift_name: string | null;
@@ -43,44 +50,51 @@ export const getPlayerPrs = async (userId: string): Promise<PlayerPrs> => {
         if (oneRepMax <= 0) continue;
 
         const existing = prMap[liftName];
-        if (!existing || oneRepMax > existing.max) {
-          const recordedAt = log.recorded_at
-            ? new Date(log.recorded_at).toISOString().split('T')[0]
-            : null;
-          prMap[liftName] = {
-            max: oneRepMax,
-            recordedAt,
-          };
+
+        // Logic for 40-Yard Dash (lower is better)
+        if (liftName === '40-Yard Dash') {
+          if (!existing || oneRepMax < existing.max) {
+            const recordedAt = log.recorded_at
+              ? new Date(log.recorded_at).toISOString().split('T')[0]
+              : null;
+            prMap[liftName] = {
+              max: oneRepMax,
+              recordedAt,
+            };
+          }
+        } else {
+          // Logic for other lifts (higher is better)
+          if (!existing || oneRepMax > existing.max) {
+            const recordedAt = log.recorded_at
+              ? new Date(log.recorded_at).toISOString().split('T')[0]
+              : null;
+            prMap[liftName] = {
+              max: oneRepMax,
+              recordedAt,
+            };
+          }
         }
       }
     }
 
+    // Helper to create PrValue
+    const createPrValue = (lift: string): PrValue | null => {
+      const data = prMap[lift];
+      if (!data) return null;
+      return {
+        value: data.max,
+        recordedAt: data.recordedAt || '',
+      };
+    };
+
     // Build response with proper keys
     const prs: PlayerPrs = {
-      benchPress: prMap['Bench Press']
-        ? ({
-            value: prMap['Bench Press'].max,
-            recordedAt: prMap['Bench Press'].recordedAt || '',
-          } as PrValue)
-        : null,
-      squat: prMap['Squat']
-        ? ({
-            value: prMap['Squat'].max,
-            recordedAt: prMap['Squat'].recordedAt || '',
-          } as PrValue)
-        : null,
-      deadlift: prMap['Deadlift']
-        ? ({
-            value: prMap['Deadlift'].max,
-            recordedAt: prMap['Deadlift'].recordedAt || '',
-          } as PrValue)
-        : null,
-      overheadPress: prMap['Overhead Press']
-        ? ({
-            value: prMap['Overhead Press'].max,
-            recordedAt: prMap['Overhead Press'].recordedAt || '',
-          } as PrValue)
-        : null,
+      benchPress: createPrValue('Bench Press'),
+      squat: createPrValue('Squat'),
+      deadlift: createPrValue('Deadlift'),
+      overheadPress: createPrValue('Overhead Press'),
+      clean: createPrValue('Clean'),
+      fortyYardDash: createPrValue('40-Yard Dash'),
     };
 
     return prs;
@@ -92,6 +106,8 @@ export const getPlayerPrs = async (userId: string): Promise<PlayerPrs> => {
       squat: null,
       deadlift: null,
       overheadPress: null,
+      clean: null,
+      fortyYardDash: null,
     };
   }
 };
