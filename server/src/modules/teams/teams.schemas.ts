@@ -4,6 +4,10 @@ export const teamParamsSchema = z.object({
   id: z.string().uuid('Team id must be a valid UUID'),
 });
 
+export const teamMembersQuerySchema = z.object({
+  status: z.enum(['active', 'inactive', 'invited', 'pending']).optional(),
+});
+
 export const teamCustomizationSchema = z.object({
   heroTitle: z.string().min(1).max(120).optional(),
   heroMessage: z.string().min(1).max(500).optional(),

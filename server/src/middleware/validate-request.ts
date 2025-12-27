@@ -42,7 +42,10 @@ const parseAndAssign = (
     if (!queryResult.success) {
       issues.push(...queryResult.error.issues);
     } else {
-      req.query = queryResult.data as ParsedQs;
+      // req.query might be read-only in some Express environments.
+      // Update properties instead of reassignment.
+      Object.keys(req.query).forEach((key) => delete req.query[key]);
+      Object.assign(req.query, queryResult.data);
     }
   }
 

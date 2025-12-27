@@ -27,13 +27,19 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
 
   logger.error(
     {
+      err: error, // Ensure 'err' key is used for some loggers to serialize Error objects
       error,
       path: req.originalUrl,
       method: req.method,
       status,
     },
-    'Unhandled error',
+    'Unhandled error processing request',
   );
+
+  // Fallback console log to ensure we see it if logger fails or is filtered
+  if (status === 500) {
+    console.error('CRITICAL 500 ERROR:', error);
+  }
 
   if (res.headersSent) {
     return next(error);

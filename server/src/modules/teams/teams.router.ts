@@ -4,12 +4,54 @@ import { validateRequest } from '../../middleware/validate-request';
 import {
   teamCustomizationSchema,
   teamParamsSchema,
+  teamMembersQuerySchema,
   type TeamCustomizationPayload,
 } from './teams.schemas';
 
+import { getAllTeams } from './teams.service';
+
 export const teamsRouter = Router();
 
+// Public endpoint to list all teams
+teamsRouter.get('/', async (_req, res, next) => {
+  try {
+    const teams = await getAllTeams();
+    return res.json(teams);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// All following routes require authentication
 teamsRouter.use(requireAuth);
+
+teamsRouter.get(
+  '/:id/members',
+  requireRole('coach'),
+  validateRequest({ params: teamParamsSchema, query: teamMembersQuerySchema }),
+  async (req, res, next) => {
+    const { id } = req.params as { id: string };
+    const { status } = req.query as { status?: string };
+
+    try {
+      // Verify requesting coach belongs to this team
+      if (req.user!.teamId !== id) {
+        // We can throw unauthorized or forbidden.
+        // If they are a valid user but accessing wrong resource -> forbidden.
+        const { forbidden } = await import('../../utils/http-error');
+        throw forbidden('You can only view members of your own team');
+      }
+
+      const { getTeamMembers } = await import('./teams.service');
+      const members = await getTeamMembers(id, status);
+      return res.json(members);
+    } catch (error) {
+      const { logger } = await import('../../lib/logger');
+      logger.error({ error }, 'Error fetching team members');
+      return next(error);
+    }
+  },
+);
 
 teamsRouter.get('/:id', validateRequest({ params: teamParamsSchema }), (req, res) => {
   const { id } = req.params as { id: string };
