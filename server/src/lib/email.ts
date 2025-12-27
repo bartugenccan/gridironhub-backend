@@ -57,7 +57,9 @@ export const sendApprovalRequestEmail = async (
   try {
     const transport = await getTransporter();
     const info = await transport.sendMail({
-      from: '"GridironHub" <noreply@gridironhub.com>',
+      from: env.SMTP_USER
+        ? `"GridironHub" <${env.SMTP_USER}>`
+        : '"GridironHub" <noreply@gridironhub.com>',
       to: recipientEmail,
       subject: `New ${requesterRole} Registration Pending Approval`,
       html: `
@@ -82,7 +84,9 @@ export const sendSetPasswordEmail = async (recipientEmail: string, resetLink: st
   try {
     const transport = await getTransporter();
     const info = await transport.sendMail({
-      from: '"GridironHub" <noreply@gridironhub.com>',
+      from: env.SMTP_USER
+        ? `"GridironHub" <${env.SMTP_USER}>`
+        : '"GridironHub" <noreply@gridironhub.com>',
       to: recipientEmail,
       subject: 'Welcome! Set Your Password',
       html: `
