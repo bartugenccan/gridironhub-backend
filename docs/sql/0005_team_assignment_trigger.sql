@@ -53,13 +53,13 @@ begin
       values (
         team_id_val,
         new.id,
-        user_role,
-        'active',
+        newUserRole,
+        case when user_role = 'player' then 'pending' else 'active' end,
         position_val
       )
       on conflict (team_id, user_id) do update
       set
-        status = 'active',
+        status = case when user_role = 'player' then 'pending' else 'active' end,
         primary_position = coalesce(position_val, team_members.primary_position);
     else
       -- Log warning if team doesn't exist

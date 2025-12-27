@@ -22,11 +22,16 @@ export const registerBodySchema = z.object({
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
     .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
     .regex(/[0-9]/, 'Password must contain at least one number'),
-  fullName: z
+  firstName: z
     .string()
-    .min(2, 'Full name must be at least 2 characters')
-    .max(100, 'Full name must be less than 100 characters'),
+    .min(2, 'First name must be at least 2 characters')
+    .max(50, 'First name must be less than 50 characters'),
+  lastName: z
+    .string()
+    .min(2, 'Last name must be at least 2 characters')
+    .max(50, 'Last name must be less than 50 characters'),
   teamId: z.string().uuid('Team ID must be a valid UUID'),
+  role: z.enum(['coach', 'player']).optional(), // Explicit role request, though we might infer or defaulting
 });
 
 export type RegisterBody = z.infer<typeof registerBodySchema>;
@@ -106,13 +111,21 @@ export const inviteCoachBodySchema = z.object({
 export type InviteCoachBody = z.infer<typeof inviteCoachBodySchema>;
 
 export const setPasswordBodySchema = z.object({
-  email: z.string().email('Invalid email address'),
+  token: z.string().min(1, 'Token is required').optional(), // If using a token based flow
   password: z
     .string()
     .min(8, 'Password must be at least 8 characters long')
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
     .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
     .regex(/[0-9]/, 'Password must contain at least one number'),
+  accessToken: z.string().optional(), // If authenticated via temp session
 });
 
 export type SetPasswordBody = z.infer<typeof setPasswordBodySchema>;
+
+export const approveUserBodySchema = z.object({
+  userId: z.string().uuid('User ID must be a valid UUID'),
+  action: z.enum(['approve', 'reject']),
+});
+
+export type ApproveUserBody = z.infer<typeof approveUserBodySchema>;

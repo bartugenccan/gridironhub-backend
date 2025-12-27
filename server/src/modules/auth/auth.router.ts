@@ -7,6 +7,8 @@ import {
   registerPlayer,
   inviteCoach,
   setCoachPassword,
+  approveUser,
+  setPasswordForUser,
 } from './auth.service';
 import {
   loginBodySchema,
@@ -14,11 +16,13 @@ import {
   registerBodySchema,
   inviteCoachBodySchema,
   setPasswordBodySchema,
+  approveUserBodySchema,
   type LoginBody,
   type RefreshBody,
   type RegisterBody,
   type InviteCoachBody,
   type SetPasswordBody,
+  type ApproveUserBody,
 } from './auth.schemas';
 
 import { requireAuth } from '../../middleware/auth-context';
@@ -130,22 +134,29 @@ authRouter.get('/invite-callback', (req, res) => {
   });
 });
 
-// Test endpoint to set password for invited coach (backend testing only)
+// General set password endpoint (authenticated or for invite flow if user IDs match)
+// NOTE: For security, if this is public, it relies on strict logic or token.
+// The `setCoachPassword` logic was finding user by email without auth, which is dangerous if public without token.
+// The new requirement: "Endpoint to set the password using a token (from the email) or temporary session."
+// If using temp session (Bearer token), `requireAuth` middleware handles it.
 authRouter.post(
   '/set-password',
+  // requireAuth, // We might need this open for invite flow IF logic handles it safely or if using access token in body/headers?
+  // If the user clicks the link, they have a session (access_token).
+  // Frontend should send Authorization header.
+  requireAuth,
   validateRequest({ body: setPasswordBodySchema }),
   async (req, res, next) => {
-    const { email, password } = req.body as SetPasswordBody;
+    const { password } = req.body as SetPasswordBody;
+    const user = req.user!;
 
     try {
-      logger.debug({ email }, 'Setting password for invited coach');
+      logger.debug({ userId: user.id }, 'Setting password for user');
 
-      await setCoachPassword(email, password);
+      await setPasswordForUser(user.id, password);
 
       return res.status(200).json({
         message: 'Password set successfully',
-        email,
-        note: 'Database triggers will automatically create profile and team assignment',
       });
     } catch (error) {
       return next(error);
@@ -157,14 +168,15 @@ authRouter.post(
   '/register',
   validateRequest({ body: registerBodySchema }),
   async (req, res, next) => {
-    const { email, password, fullName, teamId } = req.body as RegisterBody;
+    const { email, password, firstName, lastName, teamId } = req.body as RegisterBody;
 
     try {
       logger.debug({ email, teamId }, 'Registering new player with team assignment');
 
-      const authResponse = await registerPlayer(email, password, fullName, teamId);
+      const fullName = `${firstName} ${lastName}`;
+      const result = await registerPlayer(email, fullName, teamId, password);
 
-      return res.status(201).json(authResponse);
+      return res.status(201).json(result);
     } catch (error) {
       return next(error);
     }
@@ -187,6 +199,28 @@ authRouter.post(
         email,
         teamId,
         position,
+      });
+    } catch (error) {
+      return next(error);
+    }
+  },
+);
+
+authRouter.post(
+  '/approve-user',
+  requireAuth,
+  validateRequest({ body: approveUserBodySchema }),
+  async (req, res, next) => {
+    const { userId, action } = req.body as ApproveUserBody;
+    const approverId = req.user!.id;
+
+    try {
+      logger.debug({ approverId, userId, action }, 'Processing user approval');
+
+      await approveUser(approverId, userId, action);
+
+      return res.status(200).json({
+        message: `User ${action}ed successfully`,
       });
     } catch (error) {
       return next(error);
