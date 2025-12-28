@@ -57,7 +57,9 @@ export const sendApprovalRequestEmail = async (
   try {
     const transport = await getTransporter();
     const info = await transport.sendMail({
-      from: '"GridironHub" <noreply@gridironhub.com>',
+      from: env.SMTP_USER
+        ? `"GridironHub" <${env.SMTP_USER}>`
+        : '"GridironHub" <noreply@gridironhub.com>',
       to: recipientEmail,
       subject: `New ${requesterRole} Registration Pending Approval`,
       html: `
@@ -82,7 +84,9 @@ export const sendSetPasswordEmail = async (recipientEmail: string, resetLink: st
   try {
     const transport = await getTransporter();
     const info = await transport.sendMail({
-      from: '"GridironHub" <noreply@gridironhub.com>',
+      from: env.SMTP_USER
+        ? `"GridironHub" <${env.SMTP_USER}>`
+        : '"GridironHub" <noreply@gridironhub.com>',
       to: recipientEmail,
       subject: 'Welcome! Set Your Password',
       html: `
@@ -100,5 +104,32 @@ export const sendSetPasswordEmail = async (recipientEmail: string, resetLink: st
     }
   } catch (error) {
     logger.error(error, `Failed to send set password email to ${recipientEmail}`);
+  }
+};
+
+export const sendWelcomeEmail = async (recipientEmail: string, name: string) => {
+  try {
+    const transport = await getTransporter();
+    const info = await transport.sendMail({
+      from: env.SMTP_USER
+        ? `"GridironHub" <${env.SMTP_USER}>`
+        : '"GridironHub" <noreply@gridironhub.com>',
+      to: recipientEmail,
+      subject: 'Welcome to GridironHub!',
+      html: `
+        <h1>Welcome to GridironHub!</h1>
+        <p>Hello ${name},</p>
+        <p>Your account has been approved and is now active.</p>
+        <p>You can now log in to the application and start using GridironHub.</p>
+        <p>Best regards,<br>The GridironHub Team</p>
+      `,
+    });
+
+    logger.info(`Welcome email sent to ${recipientEmail}: ${info.messageId}`);
+    if (nodemailer.getTestMessageUrl(info)) {
+      logger.info(`Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
+    }
+  } catch (error) {
+    logger.error(error, `Failed to send welcome email to ${recipientEmail}`);
   }
 };
