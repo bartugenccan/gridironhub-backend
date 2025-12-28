@@ -4,7 +4,7 @@ import { supabaseAdmin } from '../../lib/supabase';
 import { env } from '../../config/env';
 import { logger } from '../../lib/logger';
 import { badRequest, forbidden, unauthorized } from '../../utils/http-error';
-import { sendApprovalRequestEmail, sendSetPasswordEmail } from '../../lib/email';
+import { sendApprovalRequestEmail, sendSetPasswordEmail, sendWelcomeEmail } from '../../lib/email';
 import type { AuthResponse, SessionPayload, UserRole, AuthenticatedUser } from './auth.types';
 import type { Database } from '../../types/supabase';
 
@@ -320,19 +320,11 @@ export const approveUser = async (
 
   if (updateError) throw badRequest('Failed to update user status');
 
-  // 5. Generate Password Reset Link
-  const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-    type: 'recovery',
-    email: targetUser.user.email!,
-  });
-
-  if (linkError || !linkData.properties?.action_link) {
-    logger.error({ linkError }, 'Failed to generate password set link');
-    // We still approved them, but email failed. User can allow normal password reset flow.
-  } else {
-    // 6. Send Email
-    await sendSetPasswordEmail(targetUser.user.email!, linkData.properties.action_link);
-  }
+  // 5. Send Welcome Email
+  await sendWelcomeEmail(
+    targetUser.user.email!,
+    targetUser.user.user_metadata?.full_name || 'User',
+  );
 };
 
 export const setCoachPassword = async (email: string, password: string): Promise<void> => {
