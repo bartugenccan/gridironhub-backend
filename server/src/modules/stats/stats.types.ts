@@ -64,7 +64,7 @@ export const createPrRequestSchema = z.object({
     message: 'Invalid exercise name',
   }),
   value: z.number().positive('Value must be a positive number'),
-  videoUrl: z.string().url().optional().or(z.literal('')),
+  videoUrl: z.string().url({ message: 'Valid video URL is required' }),
   strengthLogId: z.string().uuid().optional(),
 });
 

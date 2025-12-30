@@ -15,9 +15,7 @@ import {
 } from './stats.types';
 import { badRequest } from '../../utils/http-error';
 import { requireAuth } from '../../middleware/auth-context';
-import { upload } from '../../middleware/file-upload';
 import { supabaseAdmin } from '../../lib/supabase';
-import { uploadFile } from '../../lib/storage';
 
 export const statsRouter = Router();
 
@@ -74,32 +72,13 @@ statsRouter.get('/personal-records/history', requireAuth, async (req, res, next)
   }
 });
 
-statsRouter.post('/requests', requireAuth, upload.single('video'), async (req, res, next) => {
+// Removed 'upload' middleware and file handling logic to support client-side uploads (avoiding Vercel 4.5MB limit)
+statsRouter.post('/requests', requireAuth, async (req, res, next) => {
   try {
     const userId = req.user!.id;
-    let videoUrl = req.body.videoUrl;
 
-    // Handle file upload
-    if (req.file) {
-      const file = req.file;
-      const fileExt = file.originalname.split('.').pop();
-      const fileName = `${userId}/${Date.now()}.${fileExt}`;
-
-      try {
-        videoUrl = await uploadFile('pr-videos', fileName, file);
-      } catch (uploadError: any) {
-        throw badRequest(uploadError.message);
-      }
-    }
-
-    // Prepare data for validation (convert strings to numbers if needed)
-    const requestData = {
-      ...req.body,
-      value: Number(req.body.value), // content-type multipart sends numbers as strings
-      videoUrl: videoUrl,
-    };
-
-    const validation = createPrRequestSchema.safeParse(requestData);
+    // Use safeParse directly on req.body since we expect JSON now
+    const validation = createPrRequestSchema.safeParse(req.body);
 
     if (!validation.success) {
       throw badRequest(validation.error.message);

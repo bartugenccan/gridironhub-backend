@@ -5,6 +5,7 @@ import { env } from '../../config/env';
 import { logger } from '../../lib/logger';
 import { badRequest, forbidden, unauthorized } from '../../utils/http-error';
 import { sendApprovalRequestEmail, sendSetPasswordEmail, sendWelcomeEmail } from '../../lib/email';
+import { sendPushNotification } from '../../lib/notifications';
 import type { AuthResponse, SessionPayload, UserRole, AuthenticatedUser } from './auth.types';
 import type { Database } from '../../types/supabase';
 
@@ -193,18 +194,28 @@ export const registerPlayer = async (
 
   if (coaches && coaches.length > 0) {
     const coachIds = coaches.map((c) => c.user_id);
-    // Fetch emails for these coaches? 'listUsers' by ID is hard, maybe just iterate or find a better way.
-    // Doing a bulk fetch or iteration. Supabase Admin doesn't have "get users by IDs" easily properly exposed in JS client without list loop.
-    // We will iterate for now or just log it. Real implementation should optimize this.
-    // Let's just create a background promise to not block response.
-    Promise.all(
-      coachIds.map(async (cid) => {
-        const { data: u } = await supabaseAdmin.auth.admin.getUserById(cid);
-        if (u.user && u.user.email) {
-          await sendApprovalRequestEmail(u.user.email, fullName, 'player');
+
+    // Send Push Notifications (non-blocking)
+    (async () => {
+      try {
+        const { data: tokens } = await supabaseAdmin
+          .from('push_tokens')
+          .select('token')
+          .in('user_id', coachIds);
+
+        if (tokens && tokens.length > 0) {
+          const pushTokens = tokens.map((t) => t.token);
+          await sendPushNotification(
+            pushTokens,
+            'Yeni Oyuncu Başvurusu 🏈',
+            `${fullName} takımınıza katılmak istiyor.`,
+            { type: 'player_registration', playerName: fullName, teamId },
+          );
         }
-      }),
-    ).catch((err) => logger.error(err, 'Failed to send coach notifications'));
+      } catch (err) {
+        logger.error({ error: err }, 'Failed to send coach push notifications');
+      }
+    })();
   }
 
   return {
