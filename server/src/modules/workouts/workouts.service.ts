@@ -21,10 +21,11 @@ type GetWorkoutsOptions = {
 
 export const getWorkoutsForUser = async (
   teamId: string,
-  userPosition: string | null,
+  userPosition: string | string[] | null,
   options: GetWorkoutsOptions = {},
 ): Promise<WorkoutsResponse> => {
   try {
+    logger.info({ teamId, userPosition, options }, 'getWorkoutsForUser called');
     // Fetch all active workouts for the team
     const { data: workouts, error } = await supabaseAdmin
       .from('workouts')
@@ -62,11 +63,47 @@ export const getWorkoutsForUser = async (
         teamWorkouts.push(workoutItem);
       }
       // Position-specific workouts: include all for coaches or match player position
-      else if (
-        options.includeAllPositions ||
-        (userPosition && workout.assigned_to_positions.includes(userPosition))
-      ) {
+      else if (options.includeAllPositions) {
         positionWorkouts.push(workoutItem);
+      } else if (userPosition) {
+        let userPositions: string[] = [];
+
+        if (Array.isArray(userPosition)) {
+          userPositions = userPosition;
+        } else if (typeof userPosition === 'string') {
+          // Handle potential stringified JSON array from DB
+          if (userPosition.startsWith('[') && userPosition.endsWith(']')) {
+            try {
+              const parsed = JSON.parse(userPosition);
+              if (Array.isArray(parsed)) {
+                userPositions = parsed;
+              }
+            } catch (e) {
+              // Fallback if parse fails
+              userPositions = [userPosition];
+            }
+          } else {
+            userPositions = [userPosition];
+          }
+        }
+
+        logger.info(
+          {
+            workoutId: workout.id,
+            workoutPositions: workout.assigned_to_positions,
+            userPositions,
+            match: workout.assigned_to_positions.some((pos) => userPositions.includes(pos)),
+          },
+          'Checking workout permission',
+        );
+
+        const hasMatchingPosition = workout.assigned_to_positions.some((pos) =>
+          userPositions.some((up) => up.toLowerCase() === pos.toLowerCase()),
+        );
+
+        if (hasMatchingPosition) {
+          positionWorkouts.push(workoutItem);
+        }
       }
     });
 
