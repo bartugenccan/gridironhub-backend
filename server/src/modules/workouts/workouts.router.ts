@@ -10,6 +10,7 @@ import {
 } from './workouts.service';
 import { createWorkoutSchema, updateWorkoutSchema } from './workouts.types';
 import { supabaseAdmin } from '../../lib/supabase';
+import { logger } from '../../lib/logger';
 
 export const workoutsRouter = Router();
 
@@ -30,22 +31,29 @@ workoutsRouter.get('/', async (req, res, next) => {
       throw badRequest('User is not assigned to a team');
     }
 
-    let userPosition: string | null = null;
+    let userPosition: string | string[] | null = null;
     if (!isCoach) {
-      // Fetch player's position only when filtering by position
-      const { data: teamMember, error: memberError } = await supabaseAdmin
-        .from('team_members')
-        .select('primary_position')
-        .eq('user_id', userId)
-        .eq('team_id', teamId)
-        .single();
+      // Fetch player's position from player_profiles first, fallback to team_members
+      const [teamMemberResult, playerProfileResult] = await Promise.all([
+        supabaseAdmin
+          .from('team_members')
+          .select('primary_position')
+          .eq('user_id', userId)
+          .eq('team_id', teamId)
+          .single(),
+        supabaseAdmin.from('player_profiles').select('position').eq('user_id', userId).single(),
+      ]);
 
-      if (memberError) {
+      if (teamMemberResult.error) {
         throw badRequest('Failed to fetch user team information');
       }
 
-      userPosition = teamMember?.primary_position || null;
+      // Prioritize player_profile position, fallback to team_member primary_position
+      userPosition =
+        playerProfileResult.data?.position || teamMemberResult.data?.primary_position || null;
     }
+
+    logger.info({ userId, teamId, userPosition }, 'Fetching workouts for user');
 
     const workouts = await getWorkoutsForUser(teamId, userPosition, {
       includeAllPositions: isCoach,
